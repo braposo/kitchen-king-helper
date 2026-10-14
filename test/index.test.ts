@@ -14,7 +14,7 @@ describe("api", () => {
     const env = testEnv();
     await env.DB.prepare("INSERT INTO recipes (title, servings) VALUES (?, ?)").bind("Shakshuka", 4).run();
     const res = await call(app, env, "GET", "/api/recipes");
-    expect(res.body).toEqual([{ id: 1, title: "Shakshuka", servings: 4 }]);
+    expect(res.body).toEqual([{ id: 1, title: "Shakshuka", servings: 4, category: null, alternatives: 0 }]);
   });
 
   it("returns JSON 404 for unknown API routes", async () => {

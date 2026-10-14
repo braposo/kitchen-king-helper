@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recipes - Kitchen King</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#2f5d3a">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/recipe-editor.css">
+</head>
+<body>
+  <header>
+    <h1><a href="/">Kitchen King</a></h1>
+    <nav><a href="/retreats.html">Retreats</a><a href="/recipes.html">Recipes</a></nav>
+  </header>
+  <main>
+    <section class="card">
+      <h2>Recipes</h2>
+      <label for="q">Search</label>
+      <input id="q" type="search" placeholder="Search recipes" autocomplete="off">
+      <div class="actions">
+        <a class="button" href="/import.html">Paste a recipe</a>
+        <a class="button secondary" href="/recipe.html">New recipe</a>
+      </div>
+    </section>
+    <section class="card">
+      <ul id="list" class="recipe-list"><li class="muted">Loading…</li></ul>
+    </section>
+    <p><a href="/ingredients.html">Ingredients &amp; suppliers</a></p>
+  </main>
+  <script type="module" src="/recipes.js"></script>
+</body>
+</html>

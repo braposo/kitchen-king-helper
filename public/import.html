@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Paste a recipe - Kitchen King</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#2f5d3a">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/recipe-editor.css">
+</head>
+<body>
+  <header>
+    <h1><a href="/">Kitchen King</a></h1>
+    <nav><a href="/retreats.html">Retreats</a><a href="/recipes.html">Recipes</a></nav>
+  </header>
+  <main>
+    <section class="card" id="paste">
+      <h2>Paste a recipe</h2>
+      <label for="text">Paste the recipe from your document</label>
+      <textarea id="text" style="min-height:260px" placeholder="Title, servings, ingredients, method"></textarea>
+      <div class="actions"><button type="button" id="read">Read recipe</button></div>
+    </section>
+    <section class="card" id="draft" hidden>
+      <h2>Check the recipe</h2>
+      <div id="problems"></div>
+      <p class="muted">Lines outlined in amber need a look. Ingredients marked "new" will be added to your ingredient list.</p>
+      <div id="form"></div>
+      <div class="actions">
+        <button type="button" id="save">Save recipe</button>
+        <button type="button" id="again" class="secondary">Paste again</button>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="/import.js"></script>
+</body>
+</html>

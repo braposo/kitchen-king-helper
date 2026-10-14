@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ingredients - Kitchen King</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#2f5d3a">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/recipe-editor.css">
+</head>
+<body>
+  <header>
+    <h1><a href="/">Kitchen King</a></h1>
+    <nav><a href="/retreats.html">Retreats</a><a href="/recipes.html">Recipes</a></nav>
+  </header>
+  <main>
+    <section class="card">
+      <h2 id="ing-heading">Add an ingredient</h2>
+      <form id="ing-form">
+        <label for="i-name">Name</label><input id="i-name" required autocomplete="off">
+        <div class="row">
+          <div style="flex:1"><label for="i-unit">Measured in</label><select id="i-unit"><option value="g">grams (g)</option><option value="ml">millilitres (ml)</option><option value="each">each</option></select></div>
+          <div style="flex:1"><label for="i-storage">Kind</label><select id="i-storage"><option value="pantry">pantry</option><option value="fresh">fresh</option></select></div>
+        </div>
+        <label for="i-supplier">Supplier</label><select id="i-supplier"></select>
+        <div class="row">
+          <div style="flex:1"><label for="i-pack">Pack size (in its unit)</label><input id="i-pack" type="number" inputmode="decimal" step="any" min="0"></div>
+          <div style="flex:1"><label for="i-label">Pack label</label><input id="i-label" placeholder="1 kg bag"></div>
+        </div>
+        <div class="actions">
+          <button type="submit">Save ingredient</button>
+          <button type="button" id="i-cancel" class="secondary" hidden>Cancel</button>
+          <button type="button" id="i-delete" class="danger" hidden>Delete</button>
+        </div>
+      </form>
+    </section>
+    <section class="card"><h2>Ingredients</h2><ul id="ingredients" class="recipe-list"><li class="muted">Loading…</li></ul></section>
+    <section class="card">
+      <h2 id="sup-heading">Add a supplier</h2>
+      <form id="sup-form">
+        <label for="s-name">Name</label><input id="s-name" required autocomplete="off">
+        <div class="row">
+          <div style="flex:1"><label for="s-kind">Kind</label><select id="s-kind"><option value="supermarket">supermarket</option><option value="specialist">specialist</option></select></div>
+          <div style="flex:1"><label for="s-lead">Days notice</label><input id="s-lead" type="number" inputmode="numeric" min="0" step="1" value="1"></div>
+        </div>
+        <label for="s-contact">Contact</label><input id="s-contact" placeholder="Phone, email or website">
+        <div class="actions">
+          <button type="submit">Save supplier</button>
+          <button type="button" id="s-cancel" class="secondary" hidden>Cancel</button>
+          <button type="button" id="s-delete" class="danger" hidden>Delete</button>
+        </div>
+      </form>
+    </section>
+    <section class="card"><h2>Suppliers</h2><ul id="suppliers" class="recipe-list"><li class="muted">Loading…</li></ul></section>
+    <p><a href="/recipes.html">Back to recipes</a></p>
+  </main>
+  <script type="module" src="/ingredients.js"></script>
+</body>
+</html>
