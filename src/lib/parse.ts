@@ -1,4 +1,4 @@
-// Reads a recipe pasted from the chef's documents into a draft she can check and save.
+// Reads a recipe pasted from the chef's documents into a draft the chef can check and save.
 // Pure functions only: nothing here touches the database.
 import { inferBaseUnit, normalizeUnit, toBase, unitDimension, type BaseUnit } from "./units";
 

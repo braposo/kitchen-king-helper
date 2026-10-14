@@ -2,7 +2,7 @@
 //
 // The chef thinks in totals for the whole recipe ("800 g tomatoes for 10 people"), so the
 // lines editor shows amounts for the whole recipe in a friendly unit and converts to
-// per-serving quantities in the ingredient's base unit when she saves.
+// per-serving quantities in the ingredient's base unit when they save.
 import { escape } from "/lib.js";
 
 const ALL_UNITS = ["g", "kg", "ml", "l", "each"];
