@@ -16,6 +16,7 @@ Decisions taken while building the MVP without input from Bernardo or the chef. 
 - A pasted "2 tbsp flour" for a flour measured in grams converts at 1 ml = 1 g and flags the line. Ounces and pounds are also understood.
 - Words with no fixed size ("2 sprigs thyme", "a handful") keep the number but are flagged; "a pinch of salt" and "salt to taste" have no amount and must be filled in before saving.
 - Text before the Ingredients heading and anything under a Notes heading goes into the recipe's notes; a pasted "Vegan version" paragraph stays there for the chef to turn into an alternative.
+- New ingredients created by an import start as pantry items with no supplier. The chef switches fresh ones (herbs, dairy, veg) to fresh on the import form or the ingredients page, since that decides which delivery they go in.
 - Servings default to 1 with a warning when a paste doesn't say. Changing servings on a saved recipe keeps the amounts as shown for the whole recipe, so per-serving quantities change.
 
 ## Jev tagging and suggestions
