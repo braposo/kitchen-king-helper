@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recipe - Kitchen King</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#2f5d3a">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/recipe-editor.css">
+</head>
+<body>
+  <header>
+    <h1><a href="/">Kitchen King</a></h1>
+    <nav><a href="/retreats.html">Retreats</a><a href="/recipes.html">Recipes</a></nav>
+  </header>
+  <main>
+    <section class="card">
+      <h2 id="heading">Recipe</h2>
+      <div id="form"><p class="muted">Loading…</p></div>
+      <div class="actions">
+        <button type="button" id="save">Save</button>
+        <button type="button" id="delete" class="danger" hidden>Delete recipe</button>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="/recipe.js"></script>
+</body>
+</html>

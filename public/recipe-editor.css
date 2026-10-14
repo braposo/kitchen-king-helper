@@ -1,0 +1,20 @@
+/* Recipe form and ingredient lines editor (recipe.html and import.html). */
+.line { border: 1px solid var(--line); border-radius: 10px; padding: 8px; margin: 8px 0; display: grid; gap: 6px; }
+.line.warn { border-color: var(--warn); }
+.line .amt { display: flex; gap: 6px; }
+.line .amt input { flex: 1; min-width: 0; }
+.line .amt select { width: 96px; }
+.line .extra { display: flex; gap: 6px; align-items: center; }
+.line .extra input { flex: 1; min-width: 0; }
+.line .extra select { width: 110px; }
+.line .problem { font-size: 0.85rem; color: var(--warn); margin: 0; }
+.line .remove { min-height: 36px; padding: 4px 12px; }
+.badge.new { border-color: var(--accent); color: var(--accent); }
+.alt { border-style: dashed; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.recipe-list { list-style: none; padding: 0; }
+.recipe-list li { border-bottom: 1px solid var(--line); }
+.recipe-list a { display: block; text-decoration: none; color: inherit; padding: 4px 0; }
+.recipe-list .title { font-weight: 600; }
+.stack > * + * { margin-top: 8px; }
+[hidden] { display: none !important; }
