@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Order lists · Kitchen King</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#2f5d3a">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+    .tabs button { flex: 1; }
+    .tabs button[aria-pressed="false"] { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+    .order-lines { list-style: none; padding: 0; }
+    .order-line { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .order-line:last-child { border-bottom: 0; }
+    .order-line.done .name { text-decoration: line-through; color: var(--muted); }
+    .order-line.done .amount { text-decoration: line-through; }
+    .tick { width: 32px; height: 32px; min-width: 32px; margin: 2px 0 0; accent-color: var(--accent); }
+    .line-body { flex: 1; min-width: 0; }
+    .line-body summary { cursor: pointer; list-style: none; padding: 2px 0; }
+    .line-body summary::-webkit-details-marker { display: none; }
+    .name { font-weight: 600; }
+    .meta { font-size: 0.9rem; }
+    .panel { padding: 8px 0 4px; }
+    .panel ul { margin-bottom: 8px; font-size: 0.9rem; }
+    .panel li { padding: 2px 0; }
+    .when { margin: 12px 0 4px; font-size: 0.9rem; font-weight: 600; color: var(--muted); }
+    .card h2 { margin-bottom: 4px; }
+    .card-actions { margin: 8px 0 0; }
+    @media print {
+      .tabs, .order-line details > :not(summary), .card-actions { display: none !important; }
+      .tick { appearance: none; -webkit-appearance: none; border: 0; background: none; width: auto; height: auto; min-width: 0; margin: 0; font-size: 14pt; line-height: 1.2; }
+      .tick::before { content: "\2610"; }
+      .tick:checked::before { content: "\2611"; }
+      .card { break-inside: avoid; margin-bottom: 12pt; }
+      .order-line { break-inside: avoid; padding: 4pt 0; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><a href="/">Kitchen King</a></h1>
+    <nav><a href="/retreats.html">Retreats</a><a href="/recipes.html">Recipes</a></nav>
+  </header>
+  <main>
+    <div class="spread no-print">
+      <a id="back" href="/retreats.html">&larr; Retreat</a>
+      <button type="button" class="secondary" id="print">Print</button>
+    </div>
+    <h2 id="title">Order lists</h2>
+    <p id="dates" class="muted"></p>
+    <div class="tabs" role="group" aria-label="Group order list by">
+      <button type="button" data-tab="delivery" aria-pressed="true">By delivery</button>
+      <button type="button" data-tab="supplier" aria-pressed="false">By supplier</button>
+    </div>
+    <div id="lists"><p class="muted">Loading…</p></div>
+  </main>
+  <script type="module" src="/orders.js"></script>
+</body>
+</html>

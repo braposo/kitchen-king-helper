@@ -31,3 +31,8 @@ Decisions taken while building the MVP without input from Bernardo or the chef. 
 - Fresh items are delivered the day before the meal that uses them; pantry goods arrive the day before the retreat starts.
 - If the alternatives take more people than the meal has, the main version drops to zero servings rather than going negative.
 - Amounts of 10 g or ml and above are shown as whole numbers (333 g); below 10 they keep one decimal.
+
+## Order lists
+
+- "Copy list" leaves out lines the chef has already ticked, since ticked means done; the printed list still shows them as checked boxes.
+- Saving the details panel only stores the fields the chef actually changed, so an untouched supplier or date keeps following the automatic choice.
