@@ -1,0 +1,15 @@
+/* Jev: recipe tags (recipe.html) and dish suggestions (retreat.html). */
+.tag-category { margin: 4px 0; }
+.tag-version { margin: 6px 0; }
+.tag-version > div { margin-top: 2px; }
+.jev-note { font-size: 0.85rem; margin: 6px 0; }
+.tag-editor { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 4px; }
+.tag-editor h3 { font-size: 0.95rem; margin: 14px 0 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { background: transparent; color: var(--fg); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; min-height: 40px; font-weight: 400; }
+.chip[data-state="yes"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.chip[data-state="no"] { color: var(--muted); }
+.chip.unsure { border-style: dashed; color: var(--warn); }
+.suggestions { margin: 6px 0; }
+.suggestions .row { margin-top: 4px; }
+.suggestions button { font-weight: 600; }

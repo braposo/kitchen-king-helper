@@ -1,4 +1,5 @@
 import { api, escape, qs, toast } from "/lib.js";
+import { fetchSuggestions } from "/jev.js";
 
 const app = document.getElementById("app");
 const id = qs("id");
@@ -72,7 +73,7 @@ function renderMeal(m, date) {
         <input id="people-${m.id}" data-field="people" type="number" inputmode="numeric" min="1" max="200" value="${m.headcount ?? ""}" placeholder="${retreat.headcount}">
         ${m.headcount === null ? `<span class="muted">(retreat default)</span>` : `<button class="linklike" data-action="reset-people">reset to ${retreat.headcount}</button>`}
       </div>
-      ${m.dishes.length ? m.dishes.map(renderDish).join("") : `<div class="suggestions" data-meal-id="${m.id}"></div>`}
+      ${m.dishes.length ? m.dishes.map(renderDish).join("") : `<div class="suggestions" data-meal-id="${m.id}"><button class="secondary" data-action="suggest-dishes">Suggest dishes</button></div>`}
       <details data-picker>
         <summary>Add dish</summary>
         <input data-picker-search type="search" placeholder="Search recipes" aria-label="Search recipes">
@@ -193,6 +194,26 @@ app.addEventListener("click", async (e) => {
   const dishId = button.closest(".dish")?.dataset.dishId;
 
   if (action === "pick-recipe") return update(`/retreats/meals/${mealId}/dishes`, "POST", { recipe_id: Number(button.dataset.recipeId) });
+  if (action === "suggest-dishes") {
+    // Asked only when the chef taps, one meal at a time. Each suggestion is a button that adds the dish.
+    const box = button.closest(".suggestions");
+    button.disabled = true;
+    button.textContent = "Asking Jev…";
+    try {
+      const list = await fetchSuggestions(mealId);
+      box.innerHTML = list.length
+        ? `<div class="row">${list
+            .slice(0, 3)
+            .map((s) => `<button class="secondary" data-action="pick-recipe" data-recipe-id="${s.recipe_id}">＋ ${escape(s.title)}</button>`)
+            .join("")}</div>`
+        : `<p class="muted">No recipes fit this meal yet.</p>`;
+    } catch (err) {
+      toast(err.message, { error: true });
+      button.disabled = false;
+      button.textContent = "Suggest dishes";
+    }
+    return;
+  }
   if (action === "delete-dish") return update(`/retreats/dishes/${dishId}`, "DELETE");
   if (action === "auto-main") return update(`/retreats/dishes/${dishId}`, "PUT", { servings: null });
   if (action === "reset-people") return update(`/retreats/meals/${mealId}`, "PUT", { headcount: null });

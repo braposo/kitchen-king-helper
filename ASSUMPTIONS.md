@@ -51,3 +51,10 @@ Decisions taken while building the MVP without input from Bernardo or the chef. 
 
 - "Copy list" leaves out lines the chef has already ticked, since ticked means done; the printed list still shows them as checked boxes.
 - Saving the details panel only stores the fields the chef actually changed, so an untouched supplier or date keeps following the automatic choice.
+
+## Jev on the pages
+
+- Tags are set with yes/no taps. A tag left "not set" is not saved, and saving confirms every tag showing yes or no, so an unsure Jev tag becomes the chef's once they save.
+- Jev looks at a recipe again after every save of it, and once after a new recipe or import is saved. Its answers never wait on the save.
+- Choosing "Let Jev suggest" for the category clears the chef's choice and asks Jev again straight away.
+- Suggested dishes are only fetched when the chef taps "Suggest dishes" on an empty meal, so opening a retreat costs no Jev calls.
