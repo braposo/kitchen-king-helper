@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recipe cards · Kitchen King</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#2f5d3a">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/print.css">
+</head>
+<body>
+  <header>
+    <h1><a href="/">Kitchen King</a></h1>
+    <nav><a href="/retreats.html">Retreats</a><a href="/recipes.html">Recipes</a></nav>
+  </header>
+  <div class="topbar no-print">
+    <a class="button secondary" id="back" href="/retreats.html">Back</a>
+    <div class="daypicker">
+      <button type="button" class="secondary" id="prev" aria-label="Previous day">&larr;</button>
+      <span class="date-label" id="date">Loading…</span>
+      <button type="button" class="secondary" id="next" aria-label="Next day">&rarr;</button>
+    </div>
+    <button type="button" class="secondary" id="all" hidden>All days</button>
+    <button type="button" id="print">Print</button>
+  </div>
+  <main class="sheet" id="cards">
+    <p class="muted">Loading…</p>
+  </main>
+  <script type="module" src="/print-recipes.js"></script>
+</body>
+</html>

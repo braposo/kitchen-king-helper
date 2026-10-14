@@ -1,0 +1,55 @@
+/* Printables: the daily sheet and the recipe cards. Linked by print-day.html and print-recipes.html. */
+
+.topbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px; max-width: 720px; margin: 0 auto; }
+.topbar .daypicker { display: flex; gap: 6px; align-items: center; flex: 1 1 auto; justify-content: center; }
+.topbar .daypicker button { padding: 8px 12px; }
+.topbar .date-label { font-weight: 600; text-align: center; }
+.topbar .spacer { flex: 1 1 auto; }
+
+.sheet { max-width: 720px; margin: 0 auto; padding: 0 16px 24px; }
+.sheet-title { font-size: 1.3rem; margin: 0 0 12px; }
+.servings { color: var(--muted); font-weight: 400; }
+.prep { color: var(--muted); font-style: italic; }
+.meal { margin-bottom: 16px; }
+.meal h2 { font-size: 1.1rem; margin: 0; }
+.meal-meta { margin: 0 0 4px; color: var(--muted); }
+.dish { margin: 10px 0; break-inside: avoid; }
+.dish h3 { font-size: 1rem; margin: 0 0 2px; }
+.ver { font-weight: 600; margin: 6px 0 2px; }
+
+/* Ingredient list: two columns, name (with prep note) and amount. */
+table.lines { font-size: 0.95rem; }
+table.lines td { padding: 4px 4px; border-bottom: 1px dotted var(--line); }
+table.lines td.num { white-space: nowrap; }
+
+.checks { list-style: none; padding: 0; margin: 0; }
+.checks li { padding: 4px 0; }
+.box { font-size: 1.2em; margin-right: 4px; }
+
+.recipe-card { margin: 0 auto 16px; max-width: 720px; }
+.recipe-card h2 { font-size: 1.4rem; margin: 0 0 4px; }
+.recipe-card h3 { font-size: 1rem; margin: 14px 0 4px; }
+.recipe-card .meta { margin: 0 0 4px; color: var(--muted); }
+.recipe-card .method { white-space: normal; }
+.recipe-card .empty { color: var(--muted); }
+
+/* A4 with a comfortable margin. Anything with no print rule keeps its screen look. */
+@page { size: A4; margin: 12mm; }
+
+@media print {
+  header { display: none; }
+  body { font-size: 10pt; }
+  .sheet, .recipe-card { max-width: none; margin: 0; padding: 0; }
+  .sheet-title { font-size: 14pt; margin-bottom: 8px; }
+  .meal { margin-bottom: 10px; }
+  .meal h2 { font-size: 11pt; }
+  .meal-meta, .servings, .prep, .recipe-card .meta, .recipe-card .empty { color: #000; }
+  .dish { margin: 6px 0; }
+  .dish h3, .recipe-card h3 { font-size: 10.5pt; }
+  table.lines { font-size: 10pt; }
+  table.lines td { padding: 2px 4px; }
+  .checks li { padding: 2px 0; }
+  .recipe-card { break-inside: auto; }
+  .recipe-card h2 { font-size: 16pt; }
+  .recipe-card .method { font-size: 10.5pt; }
+}
