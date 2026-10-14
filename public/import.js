@@ -45,7 +45,7 @@ $("save").addEventListener("click", async () => {
   $("save").disabled = true;
   try {
     const saved = await api("/recipes", { method: "POST", body: form.getRecipe() });
-    location.href = `/recipe.html?id=${saved.id}`;
+    location.href = `/recipe.html?id=${saved.id}&tagged=0`;
   } catch (err) {
     toast(err.message, { error: true });
     $("save").disabled = false;
