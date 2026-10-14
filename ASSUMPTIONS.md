@@ -16,6 +16,7 @@ Decisions taken while building the MVP without input from Bernardo or the chef. 
 - A pasted "2 tbsp flour" for a flour measured in grams converts at 1 ml = 1 g and flags the line. Ounces and pounds are also understood.
 - Words with no fixed size ("2 sprigs thyme", "a handful") keep the number but are flagged; "a pinch of salt" and "salt to taste" have no amount and must be filled in before saving.
 - Text before the Ingredients heading and anything under a Notes heading goes into the recipe's notes; a pasted "Vegan version" paragraph stays there for the chef to turn into an alternative.
+- New ingredients created by an import start as pantry items with no supplier. The chef switches fresh ones (herbs, dairy, veg) to fresh on the import form or the ingredients page, since that decides which delivery they go in.
 - Servings default to 1 with a warning when a paste doesn't say. Changing servings on a saved recipe keeps the amounts as shown for the whole recipe, so per-serving quantities change.
 
 ## Jev tagging and suggestions
@@ -39,7 +40,7 @@ Decisions taken while building the MVP without input from Bernardo or the chef. 
 - The buffer is added to every ingredient line, including spices and "each" items; the total is then rounded up (whole packs, or whole items when there is no pack size).
 - Fresh items are delivered the day before the meal that uses them; pantry goods arrive the day before the retreat starts.
 - If the alternatives take more people than the meal has, the main version drops to zero servings rather than going negative.
-- Amounts of 10 g or ml and above are shown as whole numbers (333 g); below 10 they keep one decimal.
+- Amounts of 10 g or ml and above are shown as whole numbers (333 g); below 10 they keep one decimal. Whole items (eggs, onions) are ordered as whole numbers and shown on recipe cards rounded up to the next half (6.27 onions shows as 6.5).
 
 ## Printables
 

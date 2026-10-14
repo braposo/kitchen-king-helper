@@ -159,7 +159,7 @@ export function mockCategory(state: string): "brunch" | "snack" | "side" | "dinn
 }
 
 const MEAT_FISH = ["chicken", "beef", "pork", "lamb", "bacon", "ham", "sausages?", "chorizo", "mince", "turkey", "duck", "steak", "fish", "salmon", "tuna", "cod", "anchov(?:y|ies)", "prawns?", "shrimp", "mackerel", "haddock"];
-const DAIRY = ["milk", "butter", "cream", "cheese", "yoghurt", "yogurt"];
+const DAIRY = ["milk", "butter", "cream", "cheese", "yoghurt", "yogurt", "feta", "parmesan", "mozzarella", "halloumi", "paneer", "ghee", "cheddar"];
 const EGG_HONEY = ["eggs?", "honey"];
 const WHEAT = ["wheat", "flour", "pasta", "bread", "couscous", "barley", "soy sauce"];
 const NUTS = ["almonds?", "walnuts?", "cashews?", "pecans?", "hazelnuts?", "peanuts?", "pistachios?", "pine nuts?", "nuts?", "macadamias?"];

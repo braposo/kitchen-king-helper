@@ -215,9 +215,12 @@ describe("formatQuantity", () => {
     expect(formatQuantity(999.6, "g")).toBe("1 kg");
   });
 
-  it("allows at most 2 decimals for each", () => {
+  it("rounds each up to the next half", () => {
     expect(formatQuantity(1.5, "each")).toBe("1.5");
-    expect(formatQuantity(0.3333, "each")).toBe("0.33");
+    expect(formatQuantity(0.3333, "each")).toBe("0.5");
+    expect(formatQuantity(6.27, "each")).toBe("6.5");
+    expect(formatQuantity(41.8, "each")).toBe("42");
+    expect(formatQuantity(3.0000001, "each")).toBe("3");
   });
 });
 
@@ -320,10 +323,10 @@ describe("a realistic three-day retreat", () => {
     const lines = computeOrderLines(retreat());
     const get = (name: string, group?: string) => lines.filter((l) => l.name === name && (!group || l.line_group === group));
 
-    // Eggs: 19 non-vegans x 2 x 1.1 = 41.8, rounded up per pack of 12 -> 4 boxes, each day.
+    // Eggs: 19 non-vegans x 2 x 1.1 = 41.8, so 42 eggs -> 4 boxes of 12, each day.
     expect(get("Eggs")).toHaveLength(3);
     expect(get("Eggs", "2026-09-12")[0]).toMatchObject({ delivery_date: "2026-09-11", packs: 4 });
-    expect(get("Eggs", "2026-09-12")[0].total).toBeCloseTo(41.8, 6);
+    expect(get("Eggs", "2026-09-12")[0]).toMatchObject({ total: 42, leftover: 6 });
 
     // Tofu for 3 vegans: 3 x 100 x 1.1 = 330 g per day.
     expect(get("Tofu", "2026-09-13")[0]).toMatchObject({ total: expect.closeTo(330, 6), display: "330 g" });
