@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Retreats · Kitchen King</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#2f5d3a">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <h1><a href="/">Kitchen King</a></h1>
+    <nav><a href="/retreats.html">Retreats</a><a href="/recipes.html">Recipes</a></nav>
+  </header>
+  <main>
+    <section class="card">
+      <h2>Retreats</h2>
+      <div id="list"><p class="muted">Loading…</p></div>
+    </section>
+    <section class="card">
+      <h2>New retreat</h2>
+      <form id="new-form">
+        <label for="name">Name</label>
+        <input id="name" required placeholder="Autumn men's retreat">
+        <label for="start">First day</label>
+        <input id="start" type="date" required>
+        <label for="end">Last day</label>
+        <input id="end" type="date" required>
+        <label for="headcount">People</label>
+        <input id="headcount" type="number" inputmode="numeric" min="1" max="200" value="20" required>
+        <label for="buffer">Buffer % (extra food)</label>
+        <input id="buffer" type="number" inputmode="numeric" min="0" max="100" value="10" required>
+        <p><button type="submit">Create retreat</button></p>
+      </form>
+    </section>
+  </main>
+  <script type="module" src="/retreats.js"></script>
+</body>
+</html>
