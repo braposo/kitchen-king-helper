@@ -39,7 +39,7 @@ Decisions taken while building the MVP without input from Bernardo or the chef. 
 - The buffer is added to every ingredient line, including spices and "each" items; the total is then rounded up (whole packs, or whole items when there is no pack size).
 - Fresh items are delivered the day before the meal that uses them; pantry goods arrive the day before the retreat starts.
 - If the alternatives take more people than the meal has, the main version drops to zero servings rather than going negative.
-- Amounts of 10 g or ml and above are shown as whole numbers (333 g); below 10 they keep one decimal.
+- Amounts of 10 g or ml and above are shown as whole numbers (333 g); below 10 they keep one decimal. Whole items (eggs, onions) are ordered as whole numbers and shown on recipe cards rounded up to the next half (6.27 onions shows as 6.5).
 
 ## Printables
 

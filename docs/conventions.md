@@ -8,6 +8,7 @@ How the code is laid out, so each milestone can be built in parallel without ste
   `recipes`, `ingredients`, `suppliers`, `retreats`, `orders`, `ai`. Add routes to your own file; don't edit `index.ts` unless you add a new area.
 - Pure logic (parsing, scaling, Jev calls) lives in `src/lib/` and has unit tests. Routes stay thin.
 - Use `c.env.DB.prepare(sql).bind(...)` with `?` placeholders. Never build SQL from user input. Use `DB.batch([...])` for multi-statement writes; it runs as one transaction.
+- D1 on the free plan allows **50 queries per request**, and every statement in a batch counts. Load what a request needs in a few queries, write with multi-row statements, and never query once per row.
 - Validate request bodies by hand (no extra libraries) and return `400 { error: "message" }` with a message the chef can read. Missing rows return `404 { error }`.
 - Only the Workers runtime is available in `src/`: no Node built-ins.
 

@@ -107,7 +107,8 @@ function trim(value: number, decimals: number): string {
 
 /** Friendly text for a base-unit amount: "1.25 kg", "750 g", "1.5 l", "300 ml", "12". */
 export function formatQuantity(value: number, baseUnit: BaseUnit): string {
-  if (baseUnit === "each") return trim(value, 2);
+  // Whole items can't be bought or cooked in hundredths: round up to the next half.
+  if (baseUnit === "each") return trim(Math.ceil(value * 2 - EPSILON) / 2, 1);
   // Round first so 999.6 g reads "1 kg", not "1000 g".
   const small = value < 10 ? Number(value.toFixed(1)) : Math.round(value);
   if (small >= 1000) return `${trim(value / 1000, 2)} ${baseUnit === "g" ? "kg" : "l"}`;
@@ -216,14 +217,13 @@ export function computeOrderLines(data: PlanData): OrderLine[] {
     const supplier = supplierId == null ? null : (suppliers.get(supplierId) ?? null);
     const delivery = state?.delivery_date ?? addDays(d.line_group === "pantry" ? data.retreat.start_date : d.line_group, -1);
 
-    let total = d.total;
+    // Whole items are ordered whole, packed or not (41.8 eggs is 42 eggs).
+    const total = ingredient.base_unit === "each" ? ceilTolerant(d.total) : d.total;
     let packs: number | null = null;
     let leftover: number | null = null;
     if (ingredient.pack_size && ingredient.pack_size > 0) {
       packs = ceilTolerant(total / ingredient.pack_size);
       leftover = Math.max(0, Number((packs * ingredient.pack_size - total).toFixed(6)));
-    } else if (ingredient.base_unit === "each") {
-      total = ceilTolerant(total);
     }
 
     lines.push({
