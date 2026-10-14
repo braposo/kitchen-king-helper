@@ -74,8 +74,9 @@ export function buildState(title: string, label: string, lines: IngredientLine[]
 }
 
 // Only overwrites rows Jev made. Chef rows are left alone.
-const UPSERT_JEV_TAG = `INSERT INTO recipe_diet_tags (recipe_id, alternative_id, tag, value, confidence, source)
-  VALUES (?, ?, ?, ?, ?, 'jev')
+// `values` is a list of "(?, ?, ?, ?, ?, 'jev')" rows, one per tag.
+const UPSERT_JEV_TAGS = (values: string) => `INSERT INTO recipe_diet_tags (recipe_id, alternative_id, tag, value, confidence, source)
+  VALUES ${values}
   ON CONFLICT (recipe_id, IFNULL(alternative_id, 0), tag)
   DO UPDATE SET value = excluded.value, confidence = excluded.confidence, source = 'jev'
   WHERE recipe_diet_tags.source = 'jev'`;
@@ -137,16 +138,16 @@ export async function tagRecipe(db: D1Database, jev: Jev, recipeId: number): Pro
     const state = buildState(recipe.title, v.label, lines, recipe.method, v.alternative_id);
     const questions: Question[] = needed.map((t) => ({ kind: "yes_no", key: t, prompt: DIET_PROMPTS[t] }));
     const answers = await jev.ask(state, questions);
+    // One multi-row upsert per version keeps the batch small. D1 caps a batch at 50 statements.
+    const rows: unknown[] = [];
     needed.forEach((tag, i) => {
       const answer = answers[i];
       if (answer?.kind !== "yes_no") throw new Error(`Jev did not answer the ${tag} question`);
       const p = answer.probability;
-      statements.push(
-        db
-          .prepare(UPSERT_JEV_TAG)
-          .bind(recipeId, v.alternative_id, tag, p >= 0.5 ? 1 : 0, Math.max(p, 1 - p)),
-      );
+      rows.push(recipeId, v.alternative_id, tag, p >= 0.5 ? 1 : 0, Math.max(p, 1 - p));
     });
+    const placeholders = needed.map(() => "(?, ?, ?, ?, ?, 'jev')").join(", ");
+    statements.push(db.prepare(UPSERT_JEV_TAGS(placeholders)).bind(...rows));
   }
 
   // Alternatives that were deleted: their rows cascade in the database, but
