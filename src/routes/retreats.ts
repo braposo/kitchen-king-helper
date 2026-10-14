@@ -311,31 +311,40 @@ retreats.post("/:id/duplicate", async (c) => {
   const end = addDays(source.end_date, shift);
 
   const newId = await createRetreat(db, name, start, end, source.headcount, source.buffer_percent);
+  // Copy in a few set-based statements rather than one query per meal and dish:
+  // D1 on the free plan allows only 50 queries per request. Rows are inserted
+  // in id order, so the nth old meal (or dish) maps to the nth new one.
+  const ranked = (table: string, retreat: string) =>
+    table === "meals"
+      ? `SELECT id, ROW_NUMBER() OVER (ORDER BY id) AS n FROM meals WHERE retreat_id = ${retreat}`
+      : `SELECT d.id, ROW_NUMBER() OVER (ORDER BY d.id) AS n FROM meal_dishes d JOIN meals m ON m.id = d.meal_id WHERE m.retreat_id = ${retreat}`;
   try {
-    const meals = await db.prepare("SELECT * FROM meals WHERE retreat_id = ? ORDER BY date, position, id").bind(source.id).all<MealRow>();
-    for (const m of meals.results) {
-      const mealId = (
-        await db
-          .prepare("INSERT INTO meals (retreat_id, date, slot, position, time_label, headcount) VALUES (?, ?, ?, ?, ?, ?)")
-          .bind(newId, addDays(m.date, shift), m.slot, m.position, m.time_label, m.headcount)
-          .run()
-      ).meta.last_row_id as number;
-      const dishes = await db
-        .prepare("SELECT * FROM meal_dishes WHERE meal_id = ? ORDER BY id")
-        .bind(m.id)
-        .all<{ id: number; recipe_id: number; servings: number | null }>();
-      for (const d of dishes.results) {
-        const dishId = (
-          await db.prepare("INSERT INTO meal_dishes (meal_id, recipe_id, servings) VALUES (?, ?, ?)").bind(mealId, d.recipe_id, d.servings).run()
-        ).meta.last_row_id as number;
-        await db
-          .prepare(
-            "INSERT INTO meal_dish_alternatives (meal_dish_id, alternative_id, servings) SELECT ?, alternative_id, servings FROM meal_dish_alternatives WHERE meal_dish_id = ?",
-          )
-          .bind(dishId, d.id)
-          .run();
-      }
-    }
+    await db.batch([
+      db
+        .prepare(
+          `INSERT INTO meals (retreat_id, date, slot, position, time_label, headcount)
+           SELECT ?1, date(date, ?3), slot, position, time_label, headcount FROM meals WHERE retreat_id = ?2 ORDER BY id`,
+        )
+        .bind(newId, source.id, `${shift >= 0 ? "+" : ""}${shift} days`),
+      db
+        .prepare(
+          `INSERT INTO meal_dishes (meal_id, recipe_id, servings)
+           SELECT nm.id, d.recipe_id, d.servings FROM meal_dishes d
+           JOIN (${ranked("meals", "?2")}) om ON om.id = d.meal_id
+           JOIN (${ranked("meals", "?1")}) nm ON nm.n = om.n
+           ORDER BY d.id`,
+        )
+        .bind(newId, source.id),
+      db
+        .prepare(
+          `INSERT INTO meal_dish_alternatives (meal_dish_id, alternative_id, servings)
+           SELECT nd.id, x.alternative_id, x.servings FROM meal_dish_alternatives x
+           JOIN (${ranked("dishes", "?2")}) od ON od.id = x.meal_dish_id
+           JOIN (${ranked("dishes", "?1")}) nd ON nd.n = od.n
+           ORDER BY x.id`,
+        )
+        .bind(newId, source.id),
+    ]);
   } catch (err) {
     await db.prepare("DELETE FROM retreats WHERE id = ?").bind(newId).run();
     throw err;

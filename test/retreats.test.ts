@@ -152,6 +152,22 @@ describe("duplicate and delete", () => {
     expect((await call(app, env, "POST", "/api/retreats/1/duplicate", { name: "", start_date: "2026-01-09" })).status).toBe(400);
   });
 
+  it("keeps each dish on the right meal when copying many, including to earlier dates", async () => {
+    const { env } = await setup();
+    await call(app, env, "POST", "/api/retreats/meals/5/dishes", { recipe_id: 1 });
+    await call(app, env, "POST", "/api/retreats/meals/1/dishes", { recipe_id: 1 });
+    await call(app, env, "POST", "/api/retreats/meals/9/dishes", { recipe_id: 1 });
+    await call(app, env, "PUT", "/api/retreats/dishes/3", { alternatives: [{ alternative_id: 1, servings: 4 }] });
+
+    const res = await call(app, env, "POST", "/api/retreats/1/duplicate", { name: "Earlier", start_date: "2025-12-01" });
+    expect(res.body.start_date).toBe("2025-12-01");
+    const withDishes = res.body.days.flatMap((d: any) => d.meals).filter((m: any) => m.dishes.length);
+    const original = (await call(app, env, "GET", "/api/retreats/1")).body.days.flatMap((d: any) => d.meals).filter((m: any) => m.dishes.length);
+    expect(withDishes.map((m: any) => [m.slot, m.position, m.dishes[0].alternatives])).toEqual(
+      original.map((m: any) => [m.slot, m.position, m.dishes[0].alternatives]),
+    );
+  });
+
   it("deletes a retreat and everything in it", async () => {
     const { env } = await setup();
     await call(app, env, "POST", "/api/retreats/meals/1/dishes", { recipe_id: 1 });
