@@ -1,22 +1,12 @@
+import { api, escape } from "/lib.js";
+
 const list = document.getElementById("recipes");
-const status = document.getElementById("status");
 
-async function load() {
-  try {
-    const res = await fetch("/api/recipes");
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const recipes = await res.json();
-    list.innerHTML = recipes.length
-      ? recipes.map((r) => `<li>${escape(r.title)} <span class="muted">serves ${r.servings}</span></li>`).join("")
-      : `<li class="muted">No recipes yet.</li>`;
-  } catch (err) {
-    list.innerHTML = "";
-    status.textContent = `Could not load recipes (${err.message}).`;
-  }
+try {
+  const recipes = await api("/recipes");
+  list.innerHTML = recipes.length
+    ? `<li>${recipes.length} recipe${recipes.length === 1 ? "" : "s"} in the library</li>`
+    : `<li class="muted">No recipes yet. Paste one in from the recipe library.</li>`;
+} catch (err) {
+  list.innerHTML = `<li class="muted">Could not load recipes (${escape(err.message)}).</li>`;
 }
-
-function escape(text) {
-  return String(text).replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
-}
-
-load();

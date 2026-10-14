@@ -10,13 +10,21 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header><h1>Kitchen King</h1></header>
+  <header>
+    <h1><a href="/">Kitchen King</a></h1>
+    <nav><a href="/retreats.html">Retreats</a><a href="/recipes.html">Recipes</a></nav>
+  </header>
   <main>
+    <section class="card">
+      <h2>Retreats</h2>
+      <p class="muted">Plan menus, then get the order lists and daily sheets.</p>
+      <a class="button" href="/retreats.html">Open retreats</a>
+    </section>
     <section class="card">
       <h2>Recipes</h2>
       <ul id="recipes"><li class="muted">Loading…</li></ul>
+      <p><a class="button" href="/recipes.html">Open recipe library</a></p>
     </section>
-    <p class="muted" id="status"></p>
   </main>
   <script type="module" src="/app.js"></script>
 </body>

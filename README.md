@@ -23,6 +23,9 @@ npm test
 
 ## Layout
 
-- `src/index.ts`: API routes (Hono), all under `/api/*`
+- `src/index.ts`: mounts the API routers in `src/routes/`, all under `/api/*`
+- `src/lib/`: pure logic (parsing, quantities, Jev)
 - `public/`: plain HTML, CSS and JavaScript, plus the home-screen manifest
 - `migrations/`: D1 schema as SQL files, applied in order
+
+See [docs/conventions.md](docs/conventions.md) for how the code is organised, and [ASSUMPTIONS.md](ASSUMPTIONS.md) for decisions still to confirm.
