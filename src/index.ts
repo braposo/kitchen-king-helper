@@ -6,6 +6,7 @@ import suppliers from "./routes/suppliers";
 import retreats from "./routes/retreats";
 import orders from "./routes/orders";
 import ai from "./routes/ai";
+import print from "./routes/print";
 
 export type { Env } from "./env";
 
@@ -22,6 +23,7 @@ app.route("/api/suppliers", suppliers);
 app.route("/api/retreats", retreats);
 app.route("/api/orders", orders);
 app.route("/api/ai", ai);
+app.route("/api/print", print);
 
 app.notFound((c) => c.json({ error: "Not found" }, 404));
 

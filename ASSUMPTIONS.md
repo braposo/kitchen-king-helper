@@ -15,3 +15,9 @@ Decisions taken while building the MVP without input from Bernardo or the chef. 
 - Fresh items are delivered the day before the meal that uses them; pantry goods arrive the day before the retreat starts.
 - If the alternatives take more people than the meal has, the main version drops to zero servings rather than going negative.
 - Amounts of 10 g or ml and above are shown as whole numbers (333 g); below 10 they keep one decimal.
+
+## Printables
+
+- The daily sheet and recipe cards include the buffer, so the printed amounts match the order lists.
+- A recipe served at two meals gets a card for each serving, dated, so the cook sees each occasion separately.
+- The "prep ahead" list covers only the next day's meals; the last day of a retreat shows nothing to prep.
