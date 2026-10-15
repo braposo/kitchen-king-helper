@@ -17,7 +17,7 @@ npm test
 
 Every push to `main` deploys through GitHub Actions (`.github/workflows/deploy.yml`): it runs the checks, applies D1 migrations, then deploys. It skips until the secrets below exist.
 
-1. In Cloudflare, create the database: **Storage & Databases → D1 → Create**, named `kitchen`. Put its id in `wrangler.jsonc` as `database_id`.
+1. The D1 database `kitchen` already exists and its id is in `wrangler.jsonc`. For a fresh account, create one under **Storage & Databases → D1** and replace the id.
 2. Create an API token (**My Profile → API Tokens → Create Token**) from the **Edit Cloudflare Workers** template, adding **Account → D1 → Edit**.
 3. In GitHub, add repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` (the account id is on the Workers overview page).
 4. Run the **Deploy** workflow (or push to `main`).
