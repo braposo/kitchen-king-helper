@@ -13,8 +13,7 @@
     {
       "binding": "DB",
       "database_name": "kitchen",
-      // Replace with the id printed by `npx wrangler d1 create kitchen`.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "5c8fce8e-29b6-4ede-b312-e6f7bdcf981c",
       "migrations_dir": "migrations"
     }
   ]
