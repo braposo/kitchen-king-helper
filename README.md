@@ -26,6 +26,17 @@ Every push to `main` deploys through GitHub Actions (`.github/workflows/deploy.y
 
 To deploy by hand instead: `npx wrangler login`, `npm run db:migrate:remote`, `npm run deploy`.
 
+## Sample recipes
+
+`seed/` holds ten sample retreat recipes (brunch, snacks, dinners and a side, most with a vegan, gluten-free or dairy-free version) for trying the app. Every sample recipe and supplier ends in "(sample)".
+
+```sh
+npx wrangler d1 execute kitchen --remote --file seed/sample-recipes.sql   # load (replaces earlier samples)
+npx wrangler d1 execute kitchen --remote --file seed/remove-samples.sql   # take them out again
+```
+
+Use `--local` instead of `--remote` for the local database. To change the samples, edit `seed/sample-recipes.mjs` and run `node seed/sample-recipes.mjs` to regenerate both SQL files.
+
 ## Layout
 
 - `src/index.ts`: mounts the API routers in `src/routes/`, all under `/api/*`
