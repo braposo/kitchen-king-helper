@@ -2,60 +2,111 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ingredients - Kitchen King</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Pantry · Kitchen King</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
-  <meta name="theme-color" content="#2f5d3a">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)">
+  <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/recipe-editor.css">
 </head>
 <body>
-  <header>
-    <h1><a href="/">Kitchen King</a></h1>
-    <nav><a href="/retreats.html">Retreats</a><a href="/recipes.html">Recipes</a></nav>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <a class="brand" href="/"><span class="brand-mark"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"/><path d="M5 21h14"/></svg></span>Kitchen King</a>
+      <nav class="top-nav" aria-label="Main"><a href="/">Home</a><a href="/retreats.html">Retreats</a><a href="/recipes.html">Recipes</a><a href="/ingredients.html" aria-current="page">Pantry</a></nav>
+    </div>
   </header>
-  <main>
-    <section class="card">
-      <h2 id="ing-heading">Add an ingredient</h2>
+  <main class="container">
+    <div class="page-header">
+      <div>
+        <h1>Pantry</h1>
+        <p>Your ingredients and the suppliers you order them from.</p>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="tabs-list" role="group" aria-label="Pantry sections" id="parts">
+        <button type="button" data-part="ingredients" aria-pressed="true">Ingredients</button>
+        <button type="button" data-part="suppliers" aria-pressed="false">Suppliers</button>
+      </div>
+
+      <section id="part-ingredients" class="stack">
+        <div class="spread">
+          <p class="small muted" id="ingredients-count">&nbsp;</p>
+          <button type="button" class="btn btn-sm" id="add-ingredient"><span data-icon="plus"></span>Add an ingredient</button>
+        </div>
+        <div class="card card-flush"><div id="ingredients" class="item-list"><div class="item"><div class="grow stack-sm"><div class="skeleton skeleton-line" style="width:60%"></div><div class="skeleton skeleton-line" style="width:40%"></div></div></div></div></div>
+      </section>
+
+      <section id="part-suppliers" class="stack" hidden>
+        <div class="spread">
+          <p class="small muted" id="suppliers-count">&nbsp;</p>
+          <button type="button" class="btn btn-sm" id="add-supplier"><span data-icon="plus"></span>Add a supplier</button>
+        </div>
+        <div class="card card-flush"><div id="suppliers" class="item-list"><div class="item"><div class="grow stack-sm"><div class="skeleton skeleton-line" style="width:60%"></div><div class="skeleton skeleton-line" style="width:40%"></div></div></div></div></div>
+      </section>
+    </div>
+
+    <dialog class="dialog sheet" id="ing-dialog" aria-labelledby="ing-heading">
       <form id="ing-form">
-        <label for="i-name">Name</label><input id="i-name" required autocomplete="off">
-        <div class="row">
-          <div style="flex:1"><label for="i-unit">Measured in</label><select id="i-unit"><option value="g">grams (g)</option><option value="ml">millilitres (ml)</option><option value="each">each</option></select></div>
-          <div style="flex:1"><label for="i-storage">Kind</label><select id="i-storage"><option value="pantry">pantry</option><option value="fresh">fresh</option></select></div>
+        <h2 class="dialog-title" id="ing-heading">Add an ingredient</h2>
+        <div class="field"><label for="i-name">Name</label><input id="i-name" required autocomplete="off"></div>
+        <div class="grid-2">
+          <div class="field"><label for="i-unit">Measured in</label><select id="i-unit"><option value="g">Grams (g)</option><option value="ml">Millilitres (ml)</option><option value="each">Each</option></select></div>
+          <div class="field"><label for="i-storage">Kind</label><select id="i-storage"><option value="pantry">Pantry</option><option value="fresh">Fresh</option></select></div>
         </div>
-        <label for="i-supplier">Supplier</label><select id="i-supplier"></select>
-        <div class="row">
-          <div style="flex:1"><label for="i-pack">Pack size (in its unit)</label><input id="i-pack" type="number" inputmode="decimal" step="any" min="0"></div>
-          <div style="flex:1"><label for="i-label">Pack label</label><input id="i-label" placeholder="1 kg bag"></div>
+        <div class="field"><label for="i-supplier">Supplier</label><select id="i-supplier"></select></div>
+        <div class="grid-2">
+          <div class="field"><label for="i-pack">Pack size (unit)</label><input id="i-pack" type="number" inputmode="decimal" step="any" min="0" placeholder="1000"></div>
+          <div class="field"><label for="i-label">Pack label</label><input id="i-label" placeholder="1 kg bag"></div>
         </div>
-        <div class="actions">
-          <button type="submit">Save ingredient</button>
-          <button type="button" id="i-cancel" class="secondary" hidden>Cancel</button>
-          <button type="button" id="i-delete" class="danger" hidden>Delete</button>
+        <div class="dialog-footer sheet-footer">
+          <button type="button" id="i-delete" class="btn btn-ghost-destructive" hidden><span data-icon="trash-2"></span>Delete</button>
+          <span class="spacer"></span>
+          <button type="button" id="i-cancel" class="btn btn-outline">Cancel</button>
+          <button type="submit" class="btn">Save ingredient</button>
         </div>
       </form>
-    </section>
-    <section class="card"><h2>Ingredients</h2><ul id="ingredients" class="recipe-list"><li class="muted">Loading…</li></ul></section>
-    <section class="card">
-      <h2 id="sup-heading">Add a supplier</h2>
+    </dialog>
+
+    <dialog class="dialog sheet" id="sup-dialog" aria-labelledby="sup-heading">
       <form id="sup-form">
-        <label for="s-name">Name</label><input id="s-name" required autocomplete="off">
-        <div class="row">
-          <div style="flex:1"><label for="s-kind">Kind</label><select id="s-kind"><option value="supermarket">supermarket</option><option value="specialist">specialist</option></select></div>
-          <div style="flex:1"><label for="s-lead">Days notice</label><input id="s-lead" type="number" inputmode="numeric" min="0" step="1" value="1"></div>
+        <h2 class="dialog-title" id="sup-heading">Add a supplier</h2>
+        <div class="field"><label for="s-name">Name</label><input id="s-name" required autocomplete="off"></div>
+        <div class="grid-2">
+          <div class="field"><label for="s-kind">Kind</label><select id="s-kind"><option value="supermarket">Supermarket</option><option value="specialist">Specialist</option></select></div>
+          <div class="field"><label for="s-lead">Days notice</label><input id="s-lead" type="number" inputmode="numeric" min="0" step="1" value="1"></div>
         </div>
-        <label for="s-contact">Contact</label><input id="s-contact" placeholder="Phone, email or website">
-        <div class="actions">
-          <button type="submit">Save supplier</button>
-          <button type="button" id="s-cancel" class="secondary" hidden>Cancel</button>
-          <button type="button" id="s-delete" class="danger" hidden>Delete</button>
+        <div class="field"><label for="s-contact">Contact</label><input id="s-contact" placeholder="Phone, email or website"></div>
+        <div class="dialog-footer sheet-footer">
+          <button type="button" id="s-delete" class="btn btn-ghost-destructive" hidden><span data-icon="trash-2"></span>Delete</button>
+          <span class="spacer"></span>
+          <button type="button" id="s-cancel" class="btn btn-outline">Cancel</button>
+          <button type="submit" class="btn">Save supplier</button>
         </div>
       </form>
-    </section>
-    <section class="card"><h2>Suppliers</h2><ul id="suppliers" class="recipe-list"><li class="muted">Loading…</li></ul></section>
-    <p><a href="/recipes.html">Back to recipes</a></p>
+    </dialog>
   </main>
+  <nav class="tab-bar" aria-label="Main">
+    <a href="/"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Home</a>
+    <a href="/retreats.html"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>Retreats</a>
+    <a href="/recipes.html"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>Recipes</a>
+    <a href="/ingredients.html" aria-current="page"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.27 21.7s9.87-3.5 12.73-6.36a4.5 4.5 0 0 0-6.36-6.37C5.77 11.84 2.27 21.7 2.27 21.7zM8.64 14l-2.05-2.04M15.34 15l-2.46-2.46"/><path d="M22 9s-1.33-2-3.5-2C16.86 7 15 9 15 9s1.33 2 3.5 2S22 9 22 9z"/><path d="M15 2s-2 1.33-2 3.5S15 9 15 9s2-1.84 2-3.5C17 3.33 15 2 15 2z"/></svg>Pantry</a>
+  </nav>
+  <style>
+    /* Edit forms open in a dialog. */
+    dialog.sheet { max-width: 28rem; max-height: calc(100dvh - 2rem); overflow-y: auto; overscroll-behavior: contain; }
+    dialog.sheet form { display: flex; flex-direction: column; gap: 1rem; }
+    dialog.sheet .dialog-footer { margin-top: 0.5rem; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
+    dialog.sheet .spacer { flex: 1; }
+    dialog.sheet .field + .field, dialog.sheet .field + .grid-2, dialog.sheet .grid-2 + .field { margin-top: 0; }
+    @media (max-width: 420px) {
+      dialog.sheet .dialog-footer { display: grid; grid-template-columns: 1fr 1fr; }
+      dialog.sheet .spacer { display: none; }
+      dialog.sheet #i-delete, dialog.sheet #s-delete { grid-column: 1 / -1; order: 3; }
+    }
+  </style>
   <script type="module" src="/ingredients.js"></script>
 </body>
 </html>

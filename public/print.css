@@ -1,55 +1,78 @@
-/* Printables: the daily sheet and the recipe cards. Linked by print-day.html and print-recipes.html. */
+/* Printables: the daily sheet and the recipe cards (print-day.html, print-recipes.html).
+   On screen they sit on a sheet of "paper"; printed, they fill an A4 page in black on white. */
 
-.topbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px; max-width: 720px; margin: 0 auto; }
-.topbar .daypicker { display: flex; gap: 6px; align-items: center; flex: 1 1 auto; justify-content: center; }
-.topbar .daypicker button { padding: 8px 12px; }
-.topbar .date-label { font-weight: 600; text-align: center; }
-.topbar .spacer { flex: 1 1 auto; }
+.toolbar .app-header-inner { gap: 0.5rem; }
+.daypicker { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 0.25rem; }
+.date-label { font-weight: 600; font-size: 0.875rem; text-align: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toolbar-actions { display: flex; align-items: center; gap: 0.5rem; }
+.toolbar-actions .btn-outline .icon + .label-wide { display: none; }
+@media (min-width: 640px) { .toolbar-actions .btn-outline .icon + .label-wide { display: inline; } }
+@media (max-width: 639px) { .toolbar-actions .btn-outline:has(.icon) { width: 2.25rem; padding: 0; } }
+@media (max-width: 639px) and (pointer: coarse) { .toolbar-actions .btn-outline:has(.icon) { width: 2.5rem; } }
 
-.sheet { max-width: 720px; margin: 0 auto; padding: 0 16px 24px; }
-.sheet-title { font-size: 1.3rem; margin: 0 0 12px; }
-.servings { color: var(--muted); font-weight: 400; }
-.prep { color: var(--muted); font-style: italic; }
-.meal { margin-bottom: 16px; }
-.meal h2 { font-size: 1.1rem; margin: 0; }
-.meal-meta { margin: 0 0 4px; color: var(--muted); }
-.dish { margin: 10px 0; break-inside: avoid; }
-.dish h3 { font-size: 1rem; margin: 0 0 2px; }
-.ver { font-weight: 600; margin: 6px 0 2px; }
+.paper {
+  max-width: 48rem; margin: 1rem auto 3rem; padding: 1.5rem 1.25rem;
+  background: var(--card); border: 1px solid var(--border); border-radius: calc(var(--radius) + 4px); box-shadow: var(--shadow-sm);
+}
+@media (max-width: 639px) { .paper { margin: 0.75rem; } }
+@media (min-width: 640px) { .paper { padding: 2.5rem 3rem; margin-top: 2rem; } }
 
-/* Ingredient list: two columns, name (with prep note) and amount. */
-table.lines { font-size: 0.95rem; }
-table.lines td { padding: 4px 4px; border-bottom: 1px dotted var(--line); }
-table.lines td.num { white-space: nowrap; }
+.sheet-title { font-size: 1.375rem; letter-spacing: -0.02em; }
+.sheet-subtitle { color: var(--muted-foreground); margin-top: 0.25rem; }
+.sheet-head { padding-bottom: 1.25rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--foreground); }
 
-.checks { list-style: none; padding: 0; margin: 0; }
-.checks li { padding: 4px 0; }
-.box { font-size: 1.2em; margin-right: 4px; }
+.servings { color: var(--muted-foreground); font-weight: 400; font-size: 0.8125rem; }
+.prep { color: var(--muted-foreground); }
 
-.recipe-card { margin: 0 auto 16px; max-width: 720px; }
-.recipe-card h2 { font-size: 1.4rem; margin: 0 0 4px; }
-.recipe-card h3 { font-size: 1rem; margin: 14px 0 4px; }
-.recipe-card .meta { margin: 0 0 4px; color: var(--muted); }
-.recipe-card .method { white-space: normal; }
-.recipe-card .empty { color: var(--muted); }
+.meal { margin-bottom: 1.75rem; }
+.meal-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding-bottom: 0.5rem; margin-bottom: 0.25rem; border-bottom: 1px solid var(--border); }
+.meal h2 { font-size: 1rem; }
+.meal-meta { color: var(--muted-foreground); font-size: 0.8125rem; white-space: nowrap; }
+.dish { padding: 0.875rem 0 0.25rem; break-inside: avoid; }
+.dish h3 { font-size: 0.9375rem; font-weight: 600; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.625rem; margin-bottom: 0.25rem; }
+.ver { font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted-foreground); margin: 0.625rem 0 0.125rem; }
 
-/* A4 with a comfortable margin. Anything with no print rule keeps its screen look. */
-@page { size: A4; margin: 12mm; }
+/* Ingredient list: name (with prep note) and amount. */
+table.lines td { padding: 0.375rem 0.5rem; border-bottom: 1px dashed var(--border); }
+table.lines td:first-child { padding-left: 0; }
+table.lines td.num { padding-right: 0; font-weight: 500; }
+table.lines tr:last-child td { border-bottom: 0; }
+
+.prep-ahead { margin-top: 2rem; padding: 1.25rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--muted); }
+.prep-ahead .meal-head { border-bottom: 0; margin: 0; padding: 0; }
+.prep-ahead h3 { font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted-foreground); margin: 1rem 0 0.25rem; }
+.checks li { display: flex; align-items: baseline; gap: 0.625rem; padding: 0.3125rem 0; }
+.box { flex-shrink: 0; width: 0.875rem; height: 0.875rem; border: 1.5px solid currentColor; border-radius: 3px; transform: translateY(0.125rem); }
+
+.recipe-card + .recipe-card { margin-top: 2.5rem; padding-top: 2.5rem; border-top: 1px solid var(--border); }
+.recipe-card h2 { font-size: 1.375rem; letter-spacing: -0.02em; }
+.recipe-card .meta { color: var(--muted-foreground); margin-top: 0.25rem; }
+.recipe-card h3 { font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted-foreground); margin: 1.5rem 0 0.25rem; display: flex; gap: 0.5rem; align-items: baseline; }
+.recipe-card h3 .servings { text-transform: none; letter-spacing: 0; }
+.recipe-card .method { line-height: 1.65; margin-top: 0.5rem; }
+.recipe-card .empty-text { color: var(--muted-foreground); }
+
+/* A4 with a comfortable margin. */
+@page { size: A4; margin: 14mm 14mm 16mm; }
 
 @media print {
-  header { display: none; }
+  .paper { max-width: none; margin: 0; padding: 0; border: 0; box-shadow: none; border-radius: 0; background: #fff; }
   body { font-size: 10pt; }
-  .sheet, .recipe-card { max-width: none; margin: 0; padding: 0; }
-  .sheet-title { font-size: 14pt; margin-bottom: 8px; }
-  .meal { margin-bottom: 10px; }
-  .meal h2 { font-size: 11pt; }
-  .meal-meta, .servings, .prep, .recipe-card .meta, .recipe-card .empty { color: #000; }
-  .dish { margin: 6px 0; }
-  .dish h3, .recipe-card h3 { font-size: 10.5pt; }
+  .sheet-title, .recipe-card h2 { font-size: 16pt; }
+  .sheet-head { padding-bottom: 8pt; margin-bottom: 12pt; border-color: #000; }
+  .meal { margin-bottom: 12pt; break-inside: auto; }
+  .meal-head { border-color: #000; break-after: avoid; }
+  .meal h2 { font-size: 12pt; }
+  .dish { padding-top: 6pt; break-inside: auto; }
+  .dish h3, .ver, .recipe-card h3 { break-after: avoid; }
+  table.lines tr { break-inside: avoid; }
+  .dish h3 { font-size: 10.5pt; }
+  .ver, .recipe-card h3, .prep-ahead h3 { color: #000; }
   table.lines { font-size: 10pt; }
-  table.lines td { padding: 2px 4px; }
-  .checks li { padding: 2px 0; }
-  .recipe-card { break-inside: auto; }
-  .recipe-card h2 { font-size: 16pt; }
+  table.lines td { padding: 2pt 4pt; border-color: #999; }
+  .prep-ahead { background: none; border: 1pt solid #000; break-inside: avoid; }
+  .servings, .prep, .meal-meta, .sheet-subtitle, .recipe-card .meta { color: #333; }
+  .recipe-card + .recipe-card { border: 0; margin: 0; padding: 0; }
   .recipe-card .method { font-size: 10.5pt; }
 }
+.prep-ahead h2 { font-size: 1rem; }

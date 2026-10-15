@@ -1,5 +1,5 @@
-import { api, escape, qs, toast } from "/lib.js";
-import { addDays, cap, linesTable, longDate, servingsText } from "/print-util.js";
+import { api, escape, icon, qs, skeleton, toast } from "/lib.js";
+import { addDays, cap, linesTable, longDate, servingsText, shortDate } from "/print-util.js";
 
 const retreatId = qs("retreat");
 let day = qs("date") || null;
@@ -42,11 +42,10 @@ function renderCard(card, first) {
   // Escape first, then keep the chef's line breaks.
   const method = card.method
     ? escape(card.method).replace(/\r?\n/g, "<br>")
-    : `<span class="empty">No method recorded.</span>`;
+    : `<span class="empty-text">No method recorded.</span>`;
   return `<article class="recipe-card${first ? "" : " page-break"}">
     <h2>${escape(card.title)}</h2>
-    <p class="meta">${escape(when)}</p>
-    <p class="meta">${servingsText(card.versions)}</p>
+    <p class="meta">${escape(when)} · ${servingsText(card.versions)}</p>
     ${versions}
     <h3>Method</h3>
     <p class="method">${method}</p>
@@ -54,7 +53,7 @@ function renderCard(card, first) {
 }
 
 function setPicker() {
-  dateLabel.textContent = day ? longDate(day) : "All days";
+  dateLabel.textContent = day ? shortDate(day) : "All days";
   allBtn.hidden = !day;
   prevBtn.disabled = !day || addDays(day, -1) < startDate;
   nextBtn.disabled = day ? addDays(day, 1) > endDate : false;
@@ -62,10 +61,10 @@ function setPicker() {
 
 async function load() {
   if (!retreatId) {
-    container.innerHTML = `<p class="warn">Open the recipe cards from a retreat day.</p>`;
+    container.innerHTML = `<div class="alert alert-warning">${icon("circle-alert")}<p class="alert-title">Open the recipe cards from a retreat day.</p></div>`;
     return;
   }
-  container.innerHTML = `<p class="muted">Loading…</p>`;
+  container.innerHTML = skeleton(4);
   setPicker();
   try {
     const query = day ? `?date=${encodeURIComponent(day)}` : "";
@@ -79,7 +78,7 @@ async function load() {
     }
     container.innerHTML = data.cards.map((card, i) => renderCard(card, i === 0)).join("");
   } catch (err) {
-    container.innerHTML = `<p class="warn">Could not load the recipe cards (${escape(err.message)}).</p>`;
+    container.innerHTML = `<div class="alert alert-warning">${icon("circle-alert")}<p class="alert-title">Could not load the recipe cards (${escape(err.message)}).</p></div>`;
     toast(err.message, { error: true });
   }
 }

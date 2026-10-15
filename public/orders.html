@@ -2,61 +2,82 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Order lists · Kitchen King</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
-  <meta name="theme-color" content="#2f5d3a">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)">
+  <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/styles.css">
   <style>
-    .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
-    .tabs button { flex: 1; }
-    .tabs button[aria-pressed="false"] { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
-    .order-lines { list-style: none; padding: 0; }
-    .order-line { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--line); }
-    .order-line:last-child { border-bottom: 0; }
-    .order-line.done .name { text-decoration: line-through; color: var(--muted); }
-    .order-line.done .amount { text-decoration: line-through; }
-    .tick { width: 32px; height: 32px; min-width: 32px; margin: 2px 0 0; accent-color: var(--accent); }
+    .order-line { align-items: flex-start; padding-top: 0.75rem; padding-bottom: 0.75rem; }
+    .order-line > .tick { margin-top: 0.0625rem; }
     .line-body { flex: 1; min-width: 0; }
-    .line-body summary { cursor: pointer; list-style: none; padding: 2px 0; }
+    .line-body summary { list-style: none; cursor: pointer; display: flex; flex-direction: column; gap: 0.125rem; border-radius: calc(var(--radius) - 4px); min-height: 1.75rem; }
     .line-body summary::-webkit-details-marker { display: none; }
-    .name { font-weight: 600; }
-    .meta { font-size: 0.9rem; }
-    .panel { padding: 8px 0 4px; }
-    .panel ul { margin-bottom: 8px; font-size: 0.9rem; }
-    .panel li { padding: 2px 0; }
-    .when { margin: 12px 0 4px; font-size: 0.9rem; font-weight: 600; color: var(--muted); }
-    .card h2 { margin-bottom: 4px; }
-    .card-actions { margin: 8px 0 0; }
+    .line-body summary:focus-visible { box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent); }
+    .line-main { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; }
+    .name { font-weight: 500; line-height: 1.35; }
+    .amount { font-weight: 500; white-space: nowrap; }
+    .meta { color: var(--muted-foreground); font-size: 0.8125rem; }
+    .order-line.done .name, .order-line.done .amount { text-decoration: line-through; color: var(--muted-foreground); font-weight: 400; }
+    .order-line.done .meta { opacity: 0.7; }
+    .panel { padding: 0.75rem 0 0.25rem; }
+    .panel-title { font-size: 0.75rem; font-weight: 500; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.375rem; }
+    .uses { margin-bottom: 1rem; font-size: 0.8125rem; }
+    .uses li { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.375rem 0; border-top: 1px solid var(--border); }
+    .uses li > span:first-child { color: var(--muted-foreground); }
+    .uses li > span:last-child { white-space: nowrap; }
+    .panel .actions { margin-top: 1rem; }
+    .when { padding: 0.5rem 1.25rem; background: var(--muted); border-block: 1px solid var(--border); font-size: 0.75rem; font-weight: 500; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.06em; }
+    .card-flush > .card-header + .order-lines { border-top: 1px solid var(--border); }
+    .card-flush > .card-header + .when { border-top: 1px solid var(--border); }
+    #tabs { margin-bottom: 1rem; }
+    @media (min-width: 640px) { .when { padding-inline: 1.5rem; } }
     @media print {
-      .tabs, .order-line details > :not(summary), .card-actions { display: none !important; }
-      .tick { appearance: none; -webkit-appearance: none; border: 0; background: none; width: auto; height: auto; min-width: 0; margin: 0; font-size: 14pt; line-height: 1.2; }
-      .tick::before { content: "\2610"; }
+      body { background: #fff; }
+      .card-flush { border: 0; border-radius: 0; box-shadow: none; margin-bottom: 14pt; break-inside: auto; }
+      .card-flush > .card-header { padding: 0 0 4pt; }
+      .item { padding: 4pt 0; min-height: 0; }
+      .order-line { break-inside: avoid; }
+      .when { background: none; border: 0; padding: 6pt 0 2pt; color: #000; }
+      .order-line details > :not(summary) { display: none !important; }
+      .tick { appearance: none !important; -webkit-appearance: none !important; border: 0 !important; background: none !important; box-shadow: none !important; width: auto !important; height: auto !important; min-width: 0; font-size: 14pt; line-height: 1.1; display: inline-block; }
+      .tick::before { content: "\2610"; width: auto !important; height: auto !important; transform: none !important; background: none !important; -webkit-mask: none !important; mask: none !important; color: #000; }
       .tick:checked::before { content: "\2611"; }
-      .card { break-inside: avoid; margin-bottom: 12pt; }
-      .order-line { break-inside: avoid; padding: 4pt 0; }
+      .order-line.done .name, .order-line.done .amount { color: #000; }
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1><a href="/">Kitchen King</a></h1>
-    <nav><a href="/retreats.html">Retreats</a><a href="/recipes.html">Recipes</a></nav>
-  </header>
-  <main>
-    <div class="spread no-print">
-      <a id="back" href="/retreats.html">&larr; Retreat</a>
-      <button type="button" class="secondary" id="print">Print</button>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <a class="brand" href="/"><span class="brand-mark"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"/><path d="M5 21h14"/></svg></span>Kitchen King</a>
+      <nav class="top-nav" aria-label="Main"><a href="/">Home</a><a href="/retreats.html" aria-current="page">Retreats</a><a href="/recipes.html">Recipes</a><a href="/ingredients.html">Pantry</a></nav>
     </div>
-    <h2 id="title">Order lists</h2>
-    <p id="dates" class="muted"></p>
-    <div class="tabs" role="group" aria-label="Group order list by">
+  </header>
+  <main class="container">
+    <div class="page-header">
+      <div>
+        <a class="back-link" id="back" href="/retreats.html"><span data-icon="chevron-left"></span>Retreat</a>
+        <h1 id="title">Order lists</h1>
+        <p id="dates"></p>
+      </div>
+      <div class="actions no-print"><button type="button" class="btn btn-outline" id="print"><span data-icon="printer"></span>Print</button></div>
+    </div>
+    <div class="tabs-list no-print" role="group" aria-label="Group order list by" id="tabs">
       <button type="button" data-tab="delivery" aria-pressed="true">By delivery</button>
       <button type="button" data-tab="supplier" aria-pressed="false">By supplier</button>
     </div>
-    <div id="lists"><p class="muted">Loading…</p></div>
+    <div id="lists" class="stack"><div class="card" aria-busy="true"><div class="skeleton skeleton-line" style="width:50%"></div><div class="skeleton skeleton-line" style="width:80%"></div><div class="skeleton skeleton-line" style="width:65%"></div></div></div>
   </main>
+  <nav class="tab-bar" aria-label="Main">
+    <a href="/"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Home</a>
+    <a href="/retreats.html" aria-current="page"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>Retreats</a>
+    <a href="/recipes.html"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>Recipes</a>
+    <a href="/ingredients.html"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.27 21.7s9.87-3.5 12.73-6.36a4.5 4.5 0 0 0-6.36-6.37C5.77 11.84 2.27 21.7 2.27 21.7zM8.64 14l-2.05-2.04M15.34 15l-2.46-2.46"/><path d="M22 9s-1.33-2-3.5-2C16.86 7 15 9 15 9s1.33 2 3.5 2S22 9 22 9z"/><path d="M15 2s-2 1.33-2 3.5S15 9 15 9s2-1.84 2-3.5C17 3.33 15 2 15 2z"/></svg>Pantry</a>
+  </nav>
   <script type="module" src="/orders.js"></script>
 </body>
 </html>

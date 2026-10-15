@@ -1,8 +1,7 @@
 // Jev on the page: a recipe's category and diet tags, and dish suggestions for a meal.
 // Everything here is best effort. A failed call shows a toast and never blocks saving.
-import { api, escape, toast } from "/lib.js";
+import { api, busy, escape, icon, toast } from "/lib.js";
 
-const CATEGORIES = ["brunch", "snack", "dinner", "side", "any"];
 const DIET_TAGS = ["vegetarian", "vegan", "gluten_free", "dairy_free", "contains_nuts"];
 const TAG_LABELS = {
   vegetarian: "Vegetarian",
@@ -25,16 +24,18 @@ function jevLive() {
 }
 
 /**
- * Shows the category and diet tags of a recipe inside `root` (the #tags box on recipe.html),
+ * Shows the diet tags of a recipe inside `root` (the #tags box on recipe.html),
  * with "Check tags" and "Ask Jev again". `tagNow` asks Jev straight away (used after a save).
- * `onCategory(previous, next)` runs whenever the category changes, so the form can follow it.
- * Returns { ask } so the page can ask Jev again after a save.
+ * The category is picked on the recipe form, not here. The page hears about it through:
+ *   `onCategory(previous, next)` when the category changes, so the form can follow it;
+ *   `onTags(tags)` whenever the tags are loaded or change, so the form can show Jev's suggestion.
+ * Returns { ask, tags } so the page can ask Jev again after a save and read the latest tags.
  */
-export async function mountRecipeTags(root, recipeId, { tagNow = false, onCategory = () => {} } = {}) {
+export async function mountRecipeTags(root, recipeId, { tagNow = false, onCategory = () => {}, onTags = () => {} } = {}) {
   const base = `/ai/recipes/${encodeURIComponent(recipeId)}`;
   let tags = null; // the last RecipeTags from the server
   let editing = false;
-  root.innerHTML = `<p class="muted">Loading tags…</p>`;
+  root.innerHTML = `<section class="card" aria-busy="true" aria-label="Loading tags"><div class="skeleton skeleton-line" style="width:40%"></div><div class="skeleton skeleton-line" style="width:70%"></div></section>`;
 
   const [live, loaded] = await Promise.all([
     jevLive(),
@@ -50,89 +51,95 @@ export async function mountRecipeTags(root, recipeId, { tagNow = false, onCatego
     const before = tags?.category ?? null;
     tags = next;
     if (before !== (next.category ?? null)) onCategory(before, next.category ?? null);
+    onTags(tags);
     render();
   }
 
   // Asks Jev about the recipe again. Errors are toasted; the buttons come back either way.
   async function ask() {
     const again = root.querySelector("[data-act=again]");
-    if (again) {
-      again.disabled = true;
-      again.textContent = "Asking Jev…";
-    }
-    try {
-      apply(await api(`${base}/tag`, { method: "POST" }));
-    } catch (err) {
-      toast(err.message, { error: true });
-      render();
-    }
+    const work = async () => {
+      try {
+        apply(await api(`${base}/tag`, { method: "POST" }));
+      } catch (err) {
+        toast(err.message, { error: true });
+        render();
+      }
+    };
+    if (again) await busy(again, work);
+    else await work();
   }
 
   function badges(version) {
     const shown = version.tags.filter((t) => t.value);
-    if (!shown.length) return `<span class="muted">No dietary tags</span>`;
+    if (!shown.length) return `<span class="muted small">No dietary tags</span>`;
     return shown
-      .map((t) => `<span class="badge${t.unsure ? " unsure" : ""}">${TAG_LABELS[t.tag]}${t.unsure ? "?" : ""}</span>`)
+      .map((t) => `<span class="badge ${t.unsure ? "badge-dashed" : "badge-secondary"}">${TAG_LABELS[t.tag]}${t.unsure ? "?" : ""}</span>`)
       .join("");
   }
 
-  // One chip per diet tag: not set, yes or no. Tapping cycles between yes and no.
+  // One toggle per diet tag: not set, yes or no. Tapping cycles between yes and no.
+  function chipInner(label, state) {
+    const mark = state === "yes" ? icon("check") : state === "no" ? icon("x") : "";
+    return `${mark}${label}`;
+  }
   function chip(version, index, tag) {
     const found = version.tags.find((t) => t.tag === tag);
     const state = found ? (found.value ? "yes" : "no") : "";
     const unsure = found?.unsure ? " unsure" : "";
-    return `<button type="button" class="chip${unsure}" data-version="${index}" data-tag="${tag}" data-state="${state}">${TAG_LABELS[tag]}: ${state || "not set"}</button>`;
+    return `<button type="button" class="toggle${unsure}" data-version="${index}" data-tag="${tag}" data-state="${state}" aria-label="${TAG_LABELS[tag]}: ${state || "not set"}">${chipInner(TAG_LABELS[tag], state)}</button>`;
   }
 
   function editor() {
-    const current = tags.category ?? "";
     return `
-      <div class="tag-editor">
-        <label for="tag-category">Category</label>
-        <select id="tag-category" data-initial="${current}">
-          <option value="">Let Jev suggest</option>
-          ${CATEGORIES.map((c) => `<option value="${c}"${c === current ? " selected" : ""}>${cap(c)}</option>`).join("")}
-        </select>
+      <hr>
+      <div class="stack tag-editor">
         ${tags.versions
-          .map((v, i) => `<h3>${escape(v.label)}</h3><div class="chips">${DIET_TAGS.map((t) => chip(v, i, t)).join("")}</div>`)
+          .map((v, i) => `<div class="stack-sm"><h3 class="tag-version-name">${escape(v.label)}</h3><div class="toggle-group">${DIET_TAGS.map((t) => chip(v, i, t)).join("")}</div></div>`)
           .join("")}
-        <p class="muted">Tap a tag to say yes or no. Tags left "not set" are not saved. Saving makes everything shown yours, so Jev will not change it.</p>
-        <div class="actions">
-          <button type="button" data-act="save">Save tags</button>
-          <button type="button" class="secondary" data-act="cancel">Cancel</button>
+        <p class="field-description">Tap a tag to say yes or no. Tags left unset are not saved. Saving makes everything shown yours, so Jev will not change it.</p>
+        <div class="row">
+          <button type="button" class="btn btn-sm" data-act="save">Save tags</button>
+          <button type="button" class="btn btn-outline btn-sm" data-act="cancel">Cancel</button>
         </div>
       </div>`;
   }
 
   function render() {
     if (!tags) {
-      root.innerHTML = `<p class="muted">Tags are not available right now.</p>`;
+      root.innerHTML = `<section class="card"><p class="muted">Tags are not available right now.</p></section>`;
       return;
     }
-    const category = tags.category
-      ? `<p><strong>${cap(tags.category)}</strong>${tags.category_source === "jev" ? ` <span class="muted">· suggested</span>` : ""}</p>`
-      : `<p class="muted">No category yet.</p>`;
     const versions = tags.versions
-      .map((v) => `<div class="tag-version"><strong>${escape(v.label)}</strong><div>${badges(v)}</div></div>`)
+      .map((v) => `<div class="tag-version"><span class="tag-version-name">${escape(v.label)}</span><div class="badges">${badges(v)}</div></div>`)
       .join("");
     root.innerHTML = `
-      ${category}
-      ${versions}
-      ${live ? "" : `<p class="muted jev-note">${OFFLINE_NOTE}</p>`}
-      <div class="row">
-        <button type="button" class="secondary" data-act="edit" aria-expanded="${editing}">Check tags</button>
-        <button type="button" class="secondary" data-act="again">Ask Jev again</button>
-      </div>
-      ${editing ? editor() : ""}`;
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title jev-title">${icon("sparkles")}Dietary tags</h2>
+            <p class="card-description">What Jev found in each version.</p>
+          </div>
+        </div>
+        <div class="stack-sm tag-versions">${versions}</div>
+        ${live ? "" : `<p class="field-description">${OFFLINE_NOTE}</p>`}
+        <div class="card-footer">
+          <button type="button" class="btn btn-outline btn-sm" data-act="edit" aria-expanded="${editing}">Check tags</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-act="again">${icon("refresh-cw")}Ask Jev again</button>
+        </div>
+        ${editing ? editor() : ""}
+      </section>`;
   }
 
   // Clicks on the chips and buttons. The box is never replaced, so one listener is enough.
   root.addEventListener("click", async (e) => {
-    const chipEl = e.target.closest(".chip");
+    const chipEl = e.target.closest(".toggle");
     if (chipEl) {
       const next = { "": "yes", yes: "no", no: "yes" }[chipEl.dataset.state];
+      const label = TAG_LABELS[chipEl.dataset.tag];
       chipEl.dataset.state = next;
-      chipEl.textContent = `${chipEl.textContent.split(":")[0]}: ${next}`;
+      chipEl.innerHTML = chipInner(label, next);
+      chipEl.setAttribute("aria-label", `${label}: ${next}`);
       chipEl.classList.remove("unsure"); // the chef has now looked at it
       return;
     }
@@ -147,34 +154,31 @@ export async function mountRecipeTags(root, recipeId, { tagNow = false, onCatego
     }
   });
 
-  // Saves the chef's tags (every tag shown with yes or no) and category, as the chef's choice.
+  // Saves the chef's tags (every tag shown with yes or no) as the chef's choice.
+  // The category is saved with the recipe, so it is not sent from here.
   async function save() {
-    const select = root.querySelector("#tag-category");
     const body = { tags: [] };
-    if (select.value !== select.dataset.initial) body.category = select.value || null;
-    for (const el of root.querySelectorAll(".chip")) {
+    for (const el of root.querySelectorAll(".toggle")) {
       if (!el.dataset.state) continue;
       const version = tags.versions[Number(el.dataset.version)];
       body.tags.push({ alternative_id: version.alternative_id, tag: el.dataset.tag, value: el.dataset.state === "yes" });
     }
-    const saveButton = root.querySelector("[data-act=save]");
-    saveButton.disabled = true;
-    try {
-      const saved = await api(`${base}/tags`, { method: "PUT", body });
-      editing = false;
-      toast("Tags saved");
-      apply(saved);
-      // A cleared category goes back to Jev, so it gets a suggestion again straight away.
-      if (body.category === null) ask();
-    } catch (err) {
-      toast(err.message, { error: true });
-      saveButton.disabled = false;
-    }
+    await busy(root.querySelector("[data-act=save]"), async () => {
+      try {
+        const saved = await api(`${base}/tags`, { method: "PUT", body });
+        editing = false;
+        toast("Tags saved");
+        apply(saved);
+      } catch (err) {
+        toast(err.message, { error: true });
+      }
+    });
   }
 
   render();
+  onTags(tags);
   if (tagNow) ask();
-  return { ask };
+  return { ask, tags: () => tags };
 }
 
 /** Jev's best dishes for an empty meal: up to three { recipe_id, title, probability }. Throws if Jev fails. */

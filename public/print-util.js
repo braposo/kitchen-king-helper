@@ -40,3 +40,10 @@ export function linesTable(lines) {
     .join("");
   return `<table class="lines"><tbody>${rows}</tbody></table>`;
 }
+
+/** "Fri 14 Nov" for a YYYY-MM-DD date: fits the toolbar on a phone. */
+export function shortDate(day) {
+  return new Date(`${day}T00:00:00Z`)
+    .toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })
+    .replace(",", "");
+}
