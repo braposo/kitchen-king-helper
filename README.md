@@ -15,11 +15,16 @@ npm test
 
 ## First deploy
 
-1. `npx wrangler login`
-2. `npx wrangler d1 create kitchen`, then paste the printed `database_id` into `wrangler.jsonc`.
-3. `npm run db:migrate:remote`
-4. `npm run deploy`
-5. Lock it down: in the Cloudflare dashboard, open **Workers & Pages → kitchen-king-helper → Access**, choose **Protect this Worker behind Access** for all traffic, and allow only the chef's email. This needs Zero Trust turned on for the account.
+Every push to `main` deploys through GitHub Actions (`.github/workflows/deploy.yml`): it runs the checks, applies D1 migrations, then deploys. It skips until the secrets below exist.
+
+1. In Cloudflare, create the database: **Storage & Databases → D1 → Create**, named `kitchen`. Put its id in `wrangler.jsonc` as `database_id`.
+2. Create an API token (**My Profile → API Tokens → Create Token**) from the **Edit Cloudflare Workers** template, adding **Account → D1 → Edit**.
+3. In GitHub, add repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` (the account id is on the Workers overview page).
+4. Run the **Deploy** workflow (or push to `main`).
+5. Lock it down: in the Cloudflare dashboard, open **Workers & Pages → kitchen-king-helper → Settings → Domains & Routes**, enable **Cloudflare Access** on the `workers.dev` route, and allow only the chef's email. This needs Zero Trust turned on for the account (free plan is fine).
+6. Optional: `npx wrangler secret put JEV_API_KEY` to switch Jev from the offline mock to the live API.
+
+To deploy by hand instead: `npx wrangler login`, `npm run db:migrate:remote`, `npm run deploy`.
 
 ## Layout
 
