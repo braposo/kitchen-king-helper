@@ -35,40 +35,59 @@ export class JevError extends Error {
 export const JEV_URL = "https://api.typesafe.ai/v1/systemone";
 const TIMEOUT_MS = 10_000;
 
-// UNVERIFIED: shape assumed, check against docs.typesafe.ai. Request and response
-// JSON are built and read only in buildRequest and parseResponse.
+export const JEV_MODEL = "jev-latest";
+
+// Request and response JSON follow https://docs.typesafe.ai/api and are built and
+// read only in buildRequest and parseResponse. Questions go as a map keyed q0, q1, ...
+// so answers can be matched back in order.
+const questionKey = (i: number) => `q${i}`;
+
+/** Choice options are keyed by their own text; a repeated option gets " (2)", " (3)" so no key collides. */
+export function optionKeys(options: string[]): string[] {
+  const seen = new Map<string, number>();
+  return options.map((o) => {
+    const n = (seen.get(o) ?? 0) + 1;
+    seen.set(o, n);
+    return n === 1 ? o : `${o} (${n})`;
+  });
+}
+
 export function buildRequest(state: string, questions: Question[]) {
   return {
     state,
-    questions: questions.map((q) =>
-      q.kind === "choose"
-        ? { type: "choice", prompt: q.prompt, options: q.options }
-        : { type: "yes_no", prompt: q.prompt },
+    model: JEV_MODEL,
+    questions: Object.fromEntries(
+      questions.map((q, i) => [
+        questionKey(i),
+        q.kind === "choose"
+          ? { type: "choice", instructions: q.prompt, criteria: Object.fromEntries(optionKeys(q.options).map((k) => [k, null])) }
+          : { type: "noul", instructions: q.prompt },
+      ]),
     ),
   };
 }
 
 const isProbability = (x: unknown): x is number => typeof x === "number" && x >= 0 && x <= 1;
 
-// UNVERIFIED: shape assumed, check against docs.typesafe.ai. Expects
-// { answers: [{ probabilities: number[] } | { probability: number }] }.
+/** Reads { answers: { q0: { probabilities: { option: p } }, q1: { noul: p } } } back into question order. */
 export function parseResponse(json: unknown, questions: Question[]): Answer[] {
   const answers = (json as { answers?: unknown } | null)?.answers;
-  if (!Array.isArray(answers) || answers.length !== questions.length) {
-    throw new JevError("Jev answered a different number of questions than it was asked");
+  if (!answers || typeof answers !== "object" || Array.isArray(answers)) {
+    throw new JevError("Jev sent no answers");
   }
   return questions.map((q, i) => {
-    const a = answers[i] as { probabilities?: unknown; probability?: unknown } | null;
+    const a = (answers as Record<string, unknown>)[questionKey(i)] as { probabilities?: unknown; noul?: unknown } | undefined;
+    if (!a) throw new JevError("Jev answered a different number of questions than it was asked");
     if (q.kind === "choose") {
-      const p = a?.probabilities;
-      if (!Array.isArray(p) || p.length !== q.options.length || !p.every(isProbability)) {
+      const map = a.probabilities as Record<string, unknown> | undefined;
+      const p = optionKeys(q.options).map((k) => map?.[k]);
+      if (!map || typeof map !== "object" || !p.every(isProbability)) {
         throw new JevError("Jev sent probabilities that do not match the options");
       }
       return { kind: "choose", probabilities: p as number[] };
     }
-    const p = a?.probability;
-    if (!isProbability(p)) throw new JevError("Jev sent a yes/no answer without a probability");
-    return { kind: "yes_no", probability: p };
+    if (!isProbability(a.noul)) throw new JevError("Jev sent a yes/no answer without a probability");
+    return { kind: "yes_no", probability: a.noul };
   });
 }
 

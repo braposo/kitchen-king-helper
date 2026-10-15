@@ -21,7 +21,7 @@ Decisions taken while building the MVP without input from Bernardo or the chef. 
 
 ## Jev tagging and suggestions
 
-- Jev's request and response JSON is assumed, not checked against the docs yet. All of it lives in `buildRequest` and `parseResponse` in `src/lib/jev.ts`.
+- Jev's request and response JSON follow the API reference at docs.typesafe.ai/api (checked 2026-10-15), using the `jev-latest` model. All of it lives in `buildRequest` and `parseResponse` in `src/lib/jev.ts`. Choice options are sent as criteria keyed by their own text, with no description.
 - Without a key the app uses a keyword mock. Its tags always show as "check this", so the chef confirms them before relying on them.
 - Jev suggests a category for the main version only. Alternatives get diet tags but no category of their own.
 - A chef's category or tag is never overwritten by Jev. Clearing a chef category also clears it, so Jev can suggest one again.

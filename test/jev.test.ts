@@ -23,11 +23,17 @@ describe("buildRequest", () => {
   it("maps choose and yes/no questions to Jev's wire types", () => {
     expect(buildRequest("Shakshuka", questions)).toEqual({
       state: "Shakshuka",
-      questions: [
-        { type: "choice", prompt: "Which meal?", options: ["brunch", "dinner", "any"] },
-        { type: "yes_no", prompt: "Vegan?" },
-      ],
+      model: "jev-latest",
+      questions: {
+        q0: { type: "choice", instructions: "Which meal?", criteria: { brunch: null, dinner: null, any: null } },
+        q1: { type: "noul", instructions: "Vegan?" },
+      },
     });
+  });
+
+  it("keeps repeated options apart", () => {
+    const body = buildRequest("x", [{ kind: "choose", prompt: "Which?", options: ["Dal", "Dal"] }]);
+    expect(body.questions.q0).toMatchObject({ criteria: { Dal: null, "Dal (2)": null } });
   });
 
   it("does not send the mock key", () => {
@@ -39,7 +45,13 @@ describe("buildRequest", () => {
 describe("parseResponse", () => {
   it("reads choice probabilities and yes/no probabilities in order", () => {
     const answers = parseResponse(
-      { answers: [{ probabilities: [0.2, 0.7, 0.1] }, { probability: 0.91 }] },
+      {
+        model: "jev-1.13.0",
+        answers: {
+          q0: { type: "choice", choice: "dinner", confidence: 0.7, probabilities: { dinner: 0.7, brunch: 0.2, any: 0.1 } },
+          q1: { type: "noul", noul: 0.91 },
+        },
+      },
       questions,
     );
     expect(answers).toEqual([
@@ -48,26 +60,26 @@ describe("parseResponse", () => {
     ]);
   });
 
-  it("rejects a missing answers list", () => {
+  it("rejects missing answers", () => {
     expect(() => parseResponse({}, questions)).toThrow(JevError);
   });
 
   it("rejects a different number of answers", () => {
-    expect(() => parseResponse({ answers: [{ probability: 0.5 }] }, questions)).toThrow(JevError);
+    expect(() => parseResponse({ answers: { q0: { noul: 0.5 } } }, questions)).toThrow(JevError);
   });
 
   it("rejects probabilities that do not match the options", () => {
     expect(() =>
-      parseResponse({ answers: [{ probabilities: [0.5, 0.5] }, { probability: 0.5 }] }, questions),
+      parseResponse({ answers: { q0: { probabilities: { brunch: 0.5, dinner: 0.5 } }, q1: { noul: 0.5 } } }, questions),
     ).toThrow(JevError);
   });
 
   it("rejects probabilities outside 0 to 1", () => {
     expect(() =>
-      parseResponse({ answers: [{ probabilities: [0.5, 0.5, 1.5] }, { probability: 0.5 }] }, questions),
+      parseResponse({ answers: { q0: { probabilities: { brunch: 0.5, dinner: 0.5, any: 1.5 } }, q1: { noul: 0.5 } } }, questions),
     ).toThrow(JevError);
     expect(() =>
-      parseResponse({ answers: [{ probabilities: [0.5, 0.5, 0.1] }, { probability: "yes" }] }, questions),
+      parseResponse({ answers: { q0: { probabilities: { brunch: 0.5, dinner: 0.4, any: 0.1 } }, q1: { noul: "yes" } } }, questions),
     ).toThrow(JevError);
   });
 });
@@ -76,7 +88,7 @@ describe("HTTP client", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("posts to Jev with the key and returns ranked options", async () => {
-    const fetchImpl = vi.fn(async () => jsonResponse({ answers: [{ probabilities: [0.1, 0.8, 0.1] }] }));
+    const fetchImpl = vi.fn(async () => jsonResponse({ answers: { q0: { probabilities: { brunch: 0.1, dinner: 0.8, any: 0.1 } } } }));
     const jev = createHttpJev("secret-key", fetchImpl as unknown as typeof fetch);
 
     const ranked = await jev.choose("Shakshuka", "Which meal?", ["brunch", "dinner", "any"]);
@@ -92,12 +104,13 @@ describe("HTTP client", () => {
     expect((init.headers as Record<string, string>).authorization).toBe("Bearer secret-key");
     expect(JSON.parse(init.body as string)).toEqual({
       state: "Shakshuka",
-      questions: [{ type: "choice", prompt: "Which meal?", options: ["brunch", "dinner", "any"] }],
+      model: "jev-latest",
+      questions: { q0: { type: "choice", instructions: "Which meal?", criteria: { brunch: null, dinner: null, any: null } } },
     });
   });
 
   it("answers yes/no questions in a single batched call", async () => {
-    const fetchImpl = vi.fn(async () => jsonResponse({ answers: [{ probabilities: [0.1, 0.8, 0.1] }, { probability: 0.3 }] }));
+    const fetchImpl = vi.fn(async () => jsonResponse({ answers: { q0: { probabilities: { brunch: 0.1, dinner: 0.8, any: 0.1 } }, q1: { noul: 0.3 } } }));
     const jev = createHttpJev("k", fetchImpl as unknown as typeof fetch);
     const answers = await jev.ask("Shakshuka", questions);
     expect(answers[1]).toEqual({ kind: "yes_no", probability: 0.3 });
@@ -147,7 +160,7 @@ describe("HTTP client", () => {
 
 describe("createJev", () => {
   it("uses the live client when a key is set", async () => {
-    const fetchImpl = vi.fn(async () => jsonResponse({ answers: [{ probability: 0.95 }] }));
+    const fetchImpl = vi.fn(async () => jsonResponse({ answers: { q0: { noul: 0.95 } } }));
     const jev = createJev({ JEV_API_KEY: "k" }, fetchImpl as unknown as typeof fetch);
     expect(await jev.yesNo("x", "Vegan?")).toBe(0.95);
     expect(fetchImpl).toHaveBeenCalled();
