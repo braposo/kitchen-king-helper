@@ -59,11 +59,17 @@ describe("POST /api/ai/recipes/:id/tag", () => {
 
   it("calls Jev over HTTP when a key is set", async () => {
     const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
-      const body = JSON.parse(init.body as string) as { questions: { type: string }[] };
+      const body = JSON.parse(init.body as string) as { questions: Record<string, { type: string; criteria?: Record<string, null> }> };
+      const answers = Object.fromEntries(
+        Object.entries(body.questions).map(([key, q]) => [
+          key,
+          q.type === "choice"
+            ? { probabilities: Object.fromEntries(Object.keys(q.criteria!).map((o, i) => [o, i === 3 ? 0.6 : 0.1])) }
+            : { noul: 0.95 },
+        ]),
+      );
       return new Response(
-        JSON.stringify({
-          answers: body.questions.map((q) => (q.type === "choice" ? { probabilities: [0.1, 0.1, 0.1, 0.6, 0.1] } : { probability: 0.95 })),
-        }),
+        JSON.stringify({ answers }),
         { status: 200, headers: { "content-type": "application/json" } },
       );
     });
