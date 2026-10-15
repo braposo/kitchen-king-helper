@@ -23,6 +23,7 @@ describe("loadPlanData", () => {
     await run(DB, "INSERT INTO meals (id, retreat_id, date, slot, position) VALUES (1, 1, '2026-06-05', 'dinner', 0), (2, 2, '2026-07-01', 'dinner', 0)");
     await run(DB, "INSERT INTO meal_dishes (id, meal_id, recipe_id, servings) VALUES (1, 1, 1, NULL), (2, 2, 2, NULL)");
     await run(DB, "INSERT INTO meal_dish_alternatives (meal_dish_id, alternative_id, servings) VALUES (1, 1, 3)");
+    await run(DB, "UPDATE meal_dishes SET versions_from_guests = 0 WHERE id = 1");
     await run(DB, "INSERT INTO order_line_state (retreat_id, ingredient_id, line_group, supplier_id, ticked) VALUES (1, 1, 'pantry', 2, 1), (2, 3, '2026-07-01', NULL, 1)");
 
     const data = (await loadPlanData(DB, 1))!;
