@@ -624,3 +624,6 @@ input[type="date"] { padding-right: 0.5rem; }
 input[type="date"]::-webkit-date-and-time-value { min-width: 0; }
 input[type="date"]::-webkit-calendar-picker-indicator { margin-left: auto; opacity: 0.5; cursor: pointer; }
 @media (prefers-color-scheme: dark) { input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); } }
+/* Keep toasts clear of a page's sticky action bar. */
+body:has(.has-action-bar) #toast { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 4.75rem); }
+@media (min-width: 640px) { body:has(.has-action-bar) #toast { bottom: 5.5rem; } }

@@ -3,7 +3,7 @@
 // The chef thinks in totals for the whole recipe ("800 g tomatoes for 10 people"), so the
 // lines editor shows amounts for the whole recipe in a friendly unit and converts to
 // per-serving quantities in the ingredient's base unit when they save.
-import { escape } from "/lib.js";
+import { confirmDialog, escape, icon } from "/lib.js";
 
 const ALL_UNITS = ["g", "kg", "ml", "l", "each"];
 const UNITS_FOR = { g: ["g", "kg"], ml: ["ml", "l"], each: ["each"] };
@@ -39,44 +39,47 @@ function ensureDatalist(ingredients) {
 export function createLinesEditor(root, ingredients) {
   ensureDatalist(ingredients);
   const byName = new Map(ingredients.map((i) => [i.name.toLowerCase(), i]));
-  root.innerHTML = `<div class="rows"></div><button type="button" class="secondary add">Add ingredient</button>`;
-  const rows = root.querySelector(".rows");
+  root.innerHTML = `<div class="lines"></div><button type="button" class="btn btn-outline btn-sm add">${icon("plus")}Add ingredient</button>`;
+  const rows = root.querySelector(".lines");
 
-  /** Updates the unit choices and "new" marker of one row from the name typed. */
+  /** Updates the unit choices and "New" marker of one row from the name typed. */
   function refresh(el) {
-    const known = byName.get(el.querySelector(".name").value.trim().toLowerCase());
+    const nameInput = el.querySelector(".name");
+    const known = byName.get(nameInput.value.trim().toLowerCase());
     const unitSelect = el.querySelector(".unit");
     const choices = known ? UNITS_FOR[known.base_unit] : ALL_UNITS;
     const current = unitSelect.value || el.dataset.unit || choices[0];
     unitSelect.innerHTML = choices.map((u) => `<option${u === current ? " selected" : ""}>${u}</option>`).join("");
     if (!choices.includes(current)) unitSelect.value = choices[0];
-    const isNew = !known && el.querySelector(".name").value.trim() !== "";
+    const isNew = !known && nameInput.value.trim() !== "";
     el.querySelector(".new").hidden = !isNew;
     el.querySelector(".storage").hidden = !isNew;
+    el.classList.toggle("is-new", isNew);
   }
 
   function addRow(row = {}) {
     const el = document.createElement("div");
-    el.className = row.problem ? "line warn" : "line";
+    el.className = row.problem ? "line needs-look" : "line";
     el.dataset.unit = row.unit ?? "";
     el.innerHTML = `
-      <div class="row"><input class="name" list="ingredient-names" placeholder="Ingredient" aria-label="Ingredient" value="${escape(row.name)}"><span class="badge new" hidden>new</span></div>
-      <div class="amt">
-        <input class="amount" type="number" inputmode="decimal" step="any" min="0" placeholder="Amount" aria-label="Amount for the whole recipe" value="${escape(row.amount)}">
-        <select class="unit" aria-label="Unit"></select>
+      <div class="line-name">
+        <input class="name" list="ingredient-names" placeholder="Ingredient" aria-label="Ingredient" autocomplete="off" value="${escape(row.name)}">
+        <span class="badge badge-outline new" hidden>New</span>
       </div>
-      <div class="extra">
-        <input class="prep" placeholder="Prep note, e.g. finely diced" aria-label="Prep note" value="${escape(row.prep)}">
-        <select class="storage" aria-label="Fresh or pantry" hidden><option value="pantry">pantry</option><option value="fresh">fresh</option></select>
-        <button type="button" class="secondary remove" aria-label="Remove ingredient">Remove</button>
+      <button type="button" class="btn btn-ghost btn-icon remove" aria-label="Remove ingredient">${icon("x")}</button>
+      <input class="amount" type="number" inputmode="decimal" step="any" min="0" placeholder="Qty" aria-label="Amount for the whole recipe" value="${escape(row.amount)}">
+      <select class="unit" aria-label="Unit"></select>
+      <div class="line-extra">
+        <input class="prep" placeholder="Prep note" aria-label="Prep note" value="${escape(row.prep)}">
+        <select class="storage" aria-label="Fresh or pantry" hidden><option value="pantry">Pantry</option><option value="fresh">Fresh</option></select>
       </div>
-      <p class="problem" ${row.problem ? "" : "hidden"}>${escape(row.problem)}</p>`;
+      <p class="line-problem" ${row.problem ? "" : "hidden"}>${icon("circle-alert")}<span>${escape(row.problem)}</span></p>`;
     el.querySelector(".storage").value = row.storage ?? "pantry";
     refresh(el);
     // Touching the name, amount or unit means the chef has looked at the line.
     const clearProblem = () => {
-      el.classList.remove("warn");
-      el.querySelector(".problem").hidden = true;
+      el.classList.remove("needs-look");
+      el.querySelector(".line-problem").hidden = true;
     };
     el.querySelector(".name").addEventListener("input", () => {
       refresh(el);
@@ -145,26 +148,37 @@ export function createLinesEditor(root, ingredients) {
  * Returns { setRecipe(recipe), getRecipe() }.
  */
 export function createRecipeForm(root, ingredients) {
+  root.classList.add("recipe-form");
   root.innerHTML = `
-    <label for="f-title">Title</label>
-    <input id="f-title" autocomplete="off">
+    <section class="card">
+      <div class="field"><label for="f-title">Title</label><input id="f-title" autocomplete="off" placeholder="Slow-roast tomato pasta"></div>
+      <div class="grid-2">
+        <div class="field"><label for="f-servings">Servings</label><input id="f-servings" type="number" inputmode="numeric" min="1" step="1" value="1"></div>
+        <div class="field"><label for="f-category">Category</label>
+          <select id="f-category"><option value="">None</option>${CATEGORIES.map((c) => `<option value="${c}">${c.charAt(0).toUpperCase() + c.slice(1)}</option>`).join("")}</select></div>
+      </div>
+      <div class="category-hint" id="f-category-hint" hidden></div>
+    </section>
     <div id="tags"></div>
-    <div class="row">
-      <div style="flex:1"><label for="f-servings">Servings</label><input id="f-servings" type="number" inputmode="numeric" min="1" step="1" value="1"></div>
-      <div style="flex:1"><label for="f-category">Category</label>
-        <select id="f-category"><option value=""></option>${CATEGORIES.map((c) => `<option>${c}</option>`).join("")}</select></div>
-    </div>
-    <h2>Ingredients</h2>
-    <p class="muted">Amounts are for the whole recipe, for the servings above.</p>
-    <div id="f-main"></div>
-    <h2>Method</h2>
-    <textarea id="f-method" aria-label="Method"></textarea>
-    <label for="f-notes">Notes</label>
-    <textarea id="f-notes" style="min-height:80px"></textarea>
-    <h2>Other versions</h2>
-    <p class="muted">A vegan or gluten-free version has its own full ingredient list.</p>
-    <div id="f-alts"></div>
-    <button type="button" class="secondary" id="f-add-alt">Add a version</button>`;
+    <section class="card">
+      <div>
+        <h2 class="card-title">Ingredients</h2>
+        <p class="card-description">Amounts are for the whole recipe, for the servings above.</p>
+      </div>
+      <div id="f-main"></div>
+    </section>
+    <section class="card">
+      <div class="field"><label for="f-method">Method</label><textarea id="f-method" class="textarea-lg" placeholder="How it is made, step by step"></textarea></div>
+      <div class="field"><label for="f-notes">Notes</label><textarea id="f-notes" placeholder="Anything to remember"></textarea></div>
+    </section>
+    <div class="versions">
+      <div>
+        <h2 class="section-title">Other versions</h2>
+        <p class="field-description">A vegan or gluten-free version has its own full ingredient list.</p>
+      </div>
+      <div id="f-alts" class="stack"></div>
+      <button type="button" class="btn btn-outline btn-block" id="f-add-alt">${icon("plus")}Add a version</button>
+    </div>`;
 
   const $ = (id) => root.querySelector(`#${id}`);
   const main = createLinesEditor($("f-main"), ingredients);
@@ -174,21 +188,30 @@ export function createRecipeForm(root, ingredients) {
     const el = document.createElement("section");
     el.className = "card alt";
     el.innerHTML = `
-      <label>Version name</label><input class="alt-label" placeholder="e.g. Vegan version" value="${escape(alt.label)}">
-      <label>Notes</label><input class="alt-notes" value="${escape(alt.notes)}">
+      <div>
+        <h3 class="card-title">${icon("copy-plus")}<span class="alt-title">Version</span></h3>
+        <p class="card-description">Its own ingredient list, used when this version is picked.</p>
+      </div>
+      <div class="field"><label>Version name</label><input class="alt-label" placeholder="e.g. Vegan version" value="${escape(alt.label)}"></div>
+      <div class="field"><label>Notes</label><input class="alt-notes" value="${escape(alt.notes)}"></div>
       <div class="alt-lines"></div>
-      <div class="actions">
-        <button type="button" class="secondary copy">Start from main version</button>
-        <button type="button" class="secondary drop">Remove this version</button>
+      <div class="card-footer bordered">
+        <button type="button" class="btn btn-outline btn-sm copy">${icon("copy")}Start from main version</button>
+        <button type="button" class="btn btn-ghost-destructive btn-sm drop">${icon("trash-2")}Remove version</button>
       </div>`;
     const editor = createLinesEditor(el.querySelector(".alt-lines"), ingredients);
     const entry = { el, id: alt.id ?? null, editor };
+    const title = el.querySelector(".alt-title");
+    const retitle = () => (title.textContent = el.querySelector(".alt-label").value.trim() || "New version");
+    el.querySelector(".alt-label").addEventListener("input", retitle);
+    retitle();
     if (alt.ingredients) editor.setLines(alt.ingredients, alt.servings);
     el.querySelector(".copy").addEventListener("click", () => {
       editor.setRows(main.getRows().map((r) => ({ ...r, problem: "" })));
     });
-    el.querySelector(".drop").addEventListener("click", () => {
-      if (!confirm("Remove this version?")) return;
+    el.querySelector(".drop").addEventListener("click", async () => {
+      const name = el.querySelector(".alt-label").value.trim();
+      if (!(await confirmDialog({ title: name ? `Remove ${name}?` : "Remove this version?", description: "Its ingredient list goes too. Nothing changes until you save the recipe.", confirm: "Remove" }))) return;
       el.remove();
       alts.splice(alts.indexOf(entry), 1);
     });
