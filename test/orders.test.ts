@@ -135,3 +135,17 @@ describe("DELETE /api/orders/:retreatId/lines", () => {
     expect((await call(app, env, "DELETE", "/api/orders/99/lines", { ingredient_id: 1, line_group: "pantry" })).status).toBe(404);
   });
 });
+
+describe("dietary list", () => {
+  it("orders the alternative's ingredients for people on the list", async () => {
+    const { DB } = env;
+    await run(DB, "INSERT INTO ingredients (id, name, base_unit, storage) VALUES (3, 'Tofu', 'g', 'fresh')");
+    await run(DB, "INSERT INTO recipe_alternatives (id, recipe_id, label) VALUES (1, 1, 'Vegan')");
+    await run(DB, "INSERT INTO recipe_ingredients (recipe_id, alternative_id, ingredient_id, quantity_per_serving, position) VALUES (1, 1, 3, 100, 0)");
+    await run(DB, "INSERT INTO retreat_guests (retreat_id, name, count, diets) VALUES (1, NULL, 2, 'vegan')");
+    const { body } = await get();
+    // Two dinners: 8 people eat the main version, 2 the vegan one.
+    expect(line(body, "Rice").total).toBe(2400);
+    expect(line(body, "Tofu", "2026-11-14").total).toBe(200);
+  });
+});

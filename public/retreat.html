@@ -26,6 +26,15 @@
     .picker-list { list-style: none; padding: 0; max-height: 40vh; overflow-y: auto; }
     .picker-list li { padding: 0; }
     .picker-list button { width: 100%; text-align: left; background: transparent; color: var(--fg); border-bottom: 1px solid var(--line); border-radius: 0; }
+    .guest { border-top: 1px solid var(--line); padding: 4px 0 10px; margin: 0; }
+    details.guest summary { color: var(--fg); font-weight: 400; }
+    .guest .grow { flex: 1; min-width: 10rem; width: auto; }
+    .guest input[data-guest=count] { width: 5rem; }
+    .guest input[data-guest=note] { margin-top: 6px; }
+    .diet-picks { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; }
+    label.inline { display: flex; align-items: center; gap: 6px; margin: 0; font-weight: 400; }
+    .hidden { display: none !important; }
+    #guest-preview ul { margin: 8px 0; }
   </style>
 </head>
 <body>

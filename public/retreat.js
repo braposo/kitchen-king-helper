@@ -9,11 +9,22 @@ let recipes = null; // loaded the first time a picker opens
 const dayFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 const dayLabel = (date) => dayFmt.format(new Date(date)).replace(",", "");
 const SLOTS = ["brunch", "snacks", "dinner"];
+// Same keys and labels as DIETS in src/lib/diets.ts.
+const DIETS = [
+  ["vegetarian", "Vegetarian"],
+  ["vegan", "Vegan"],
+  ["gluten_free", "Gluten-free"],
+  ["dairy_free", "Dairy-free"],
+  ["nut_free", "Nut-free"],
+];
+const dietLabel = (key) => DIETS.find(([k]) => k === key)?.[1] ?? key;
 
 // ---- rendering ------------------------------------------------------------
 
 function render() {
   const r = retreat;
+  // Keep the dietary list's sections open across re-renders.
+  const open = new Set([...app.querySelectorAll("details[data-keep][open]")].map((d) => d.dataset.keep));
   document.title = `${r.name} · Kitchen King`;
   app.innerHTML = `
     <section class="card">
@@ -35,7 +46,103 @@ function render() {
         </form>
       </details>
     </section>
+    ${renderDiets(open)}
     ${r.days.map(renderDay).join("")}`;
+}
+
+function renderDiets(open) {
+  const r = retreat;
+  const summary = r.diet_counts.length
+    ? r.diet_counts.map((d) => `<span class="badge">${d.count} ${escape(d.label.toLowerCase())}</span>`).join("")
+    : `<span class="muted">Nobody listed yet. Add the people with dietary needs and dishes will get the right versions.</span>`;
+  const over = r.guest_total > r.headcount
+    ? `<p class="warn">The list has ${r.guest_total} people but the retreat is set for ${r.headcount}.</p>`
+    : "";
+  return `
+    <section class="card" id="diets">
+      <h2>Dietary needs</h2>
+      <p>${summary}</p>
+      ${over}
+      <details data-keep="people"${open.has("people") ? " open" : ""}>
+        <summary>People (${r.guests.length})</summary>
+        ${r.guests.map((g) => renderGuest(g, open)).join("")}
+        <form class="guest" id="add-guest">
+          <strong>Add someone</strong>
+          ${guestFields({ name: "", count: 1, diets: [], note: "" }, "new")}
+          <p class="row"><button type="submit">Add</button></p>
+        </form>
+      </details>
+      <details data-keep="paste"${open.has("paste") ? " open" : ""}>
+        <summary>Paste a list</summary>
+        <p class="muted">One person per line, like "Tom - vegan", "Sam: gluten free, no mushrooms" or "3 dairy free". Names are optional.</p>
+        <textarea id="guest-paste" aria-label="Pasted list"></textarea>
+        <label class="inline"><input type="checkbox" id="guest-replace"> Replace the current list</label>
+        <p class="row"><button class="secondary" data-action="preview-guests">Check list</button></p>
+        <div id="guest-preview"></div>
+      </details>
+    </section>`;
+}
+
+/** Name, count, diet ticks and note. Rows on the list save as soon as a field changes. */
+function guestFields(g, key) {
+  const named = Boolean(g.name);
+  return `
+    <div class="row">
+      <input data-guest="name" value="${escape(g.name ?? "")}" placeholder="Name (optional)" aria-label="Name" class="grow">
+      <label class="inline${named ? " hidden" : ""}">× <input data-guest="count" type="number" inputmode="numeric" min="1" max="200" value="${g.count}" aria-label="How many people"></label>
+    </div>
+    <div class="diet-picks">
+      ${DIETS.map(
+        ([k, label]) =>
+          `<label class="inline"><input type="checkbox" data-guest="diet" value="${k}"${g.diets.includes(k) ? " checked" : ""} id="diet-${key}-${k}"> ${label}</label>`,
+      ).join("")}
+    </div>
+    <input data-guest="note" value="${escape(g.note ?? "")}" placeholder="Anything else (no mushrooms, allergies…)" aria-label="Note">`;
+}
+
+function renderGuest(g, open) {
+  const key = `guest-${g.id}`;
+  return `
+    <details class="guest" data-guest-id="${g.id}" data-keep="${key}"${open.has(key) ? " open" : ""}>
+      <summary>${describeGuest(g)}</summary>
+      ${guestFields(g, g.id)}
+      <p class="row"><button class="linklike" data-action="delete-guest">Remove from the list</button></p>
+    </details>`;
+}
+
+/** Reads a guest's fields from its row or form. */
+function readGuest(el) {
+  const name = el.querySelector("[data-guest=name]").value.trim();
+  return {
+    name: name || null,
+    count: name ? 1 : Number(el.querySelector("[data-guest=count]").value || 1),
+    diets: [...el.querySelectorAll("[data-guest=diet]:checked")].map((c) => c.value),
+    note: el.querySelector("[data-guest=note]").value.trim() || null,
+  };
+}
+
+function describeGuest(g) {
+  const who = g.name ? escape(g.name) : `${g.count} ${g.count === 1 ? "person" : "people"}`;
+  const needs = [...g.diets.map(dietLabel), ...(g.note ? [g.note] : [])].map(escape).join(", ");
+  return `${who} · ${needs}`;
+}
+
+let pendingImport = null; // what "Check list" read, waiting for the chef to confirm
+
+async function previewGuests() {
+  const text = document.getElementById("guest-paste").value;
+  const box = document.getElementById("guest-preview");
+  try {
+    const result = await api(`/retreats/${id}/guests/import`, { method: "POST", body: { text, preview: true } });
+    const replace = document.getElementById("guest-replace").checked;
+    pendingImport = { text, replace };
+    box.innerHTML = `
+      ${result.guests.length ? `<ul>${result.guests.map((g) => `<li>${describeGuest(g)}</li>`).join("")}</ul>` : `<p class="warn">No dietary needs found in that list.</p>`}
+      ${result.skipped.length ? `<p class="warn">Skipped (no dietary need found): ${result.skipped.map(escape).join(", ")}</p>` : ""}
+      ${result.guests.length ? `<p class="row"><button data-action="import-guests">${replace ? "Replace the list with these" : `Add ${result.guests.length} to the list`}</button></p>` : ""}`;
+  } catch (err) {
+    toast(err.message, { error: true });
+  }
 }
 
 function renderDay(day) {
@@ -106,7 +213,22 @@ function renderDish(d) {
         ${alts}
       </div>
       ${d.servings === null ? `<div class="muted">Main is automatic (${d.main_servings}). Type a number to set it yourself.</div>` : `<button class="linklike" data-action="auto-main">Back to automatic</button>`}
+      ${dishDietNote(d)}
     </div>`;
+}
+
+/** Where the version numbers come from, and anyone on the dietary list no version suits. */
+function dishDietNote(d) {
+  const hasList = retreat.guests.length > 0;
+  let source = "";
+  if (d.versions_from_guests && hasList && d.available_alternatives.length) source = `<div class="muted">Versions follow the dietary list.</div>`;
+  if (!d.versions_from_guests && hasList) source = `<div class="muted">Versions set by you. <button class="linklike" data-action="versions-from-list">Use the dietary list</button></div>`;
+  const missing = d.unmatched.length
+    ? `<div class="warn">No version suits ${d.unmatched
+        .map((g) => `${g.name ? escape(g.name) : `${g.count} ×`} (${g.diets.map(dietLabel).join(", ")})`)
+        .join("; ")}. They're counted in Main.</div>`
+    : "";
+  return source + missing;
 }
 
 // ---- talking to the server ------------------------------------------------
@@ -137,6 +259,13 @@ const numberOrNull = (text) => (text.trim() === "" ? null : Number(text));
 
 app.addEventListener("change", (e) => {
   const input = e.target;
+  const guestRow = input.closest("[data-guest-id]");
+  if (guestRow && input.dataset.guest) return update(`/retreats/guests/${guestRow.dataset.guestId}`, "PUT", readGuest(guestRow));
+  if (input.closest("#add-guest") && input.dataset.guest === "name") {
+    // A named person counts as one, so hide the count.
+    input.closest("#add-guest").querySelector("[data-guest=count]").closest("label").classList.toggle("hidden", Boolean(input.value.trim()));
+    return;
+  }
   const field = input.dataset.field;
   if (!field) return;
   const mealId = input.closest(".meal")?.dataset.mealId;
@@ -214,6 +343,23 @@ app.addEventListener("click", async (e) => {
     }
     return;
   }
+  if (action === "delete-guest") return update(`/retreats/guests/${button.closest("[data-guest-id]").dataset.guestId}`, "DELETE");
+  if (action === "preview-guests") return previewGuests();
+  if (action === "import-guests") {
+    if (!pendingImport) return;
+    const { text, replace } = pendingImport;
+    pendingImport = null;
+    try {
+      const result = await api(`/retreats/${id}/guests/import`, { method: "POST", body: { text, replace } });
+      retreat = result;
+      render();
+      toast(replace ? "Dietary list replaced." : "Added to the dietary list.");
+    } catch (err) {
+      toast(err.message, { error: true });
+    }
+    return;
+  }
+  if (action === "versions-from-list") return update(`/retreats/dishes/${dishId}`, "PUT", { versions_from_guests: true });
   if (action === "delete-dish") return update(`/retreats/dishes/${dishId}`, "DELETE");
   if (action === "auto-main") return update(`/retreats/dishes/${dishId}`, "PUT", { servings: null });
   if (action === "reset-people") return update(`/retreats/meals/${mealId}`, "PUT", { headcount: null });
@@ -246,6 +392,10 @@ app.addEventListener("click", async (e) => {
 });
 
 app.addEventListener("submit", (e) => {
+  if (e.target.id === "add-guest") {
+    e.preventDefault();
+    return update(`/retreats/${id}/guests`, "POST", readGuest(e.target));
+  }
   if (e.target.id !== "edit-form") return;
   e.preventDefault();
   const data = new FormData(e.target);

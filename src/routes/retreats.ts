@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../env";
+import { DIETS, dietCounts, dietsFromColumn, guestAlternatives, parseGuestList, sortDiets, type Guest } from "../lib/diets";
 
 // Retreats, meals and dishes (milestone 3). Mounted at /api/retreats.
 // Every write that changes a retreat's plan answers with the full retreat
@@ -132,16 +133,19 @@ async function getMealRow(db: D1Database, id: number): Promise<MealRow> {
   return row;
 }
 
-type DishRow = { id: number; meal_id: number; recipe_id: number; title: string; servings: number | null };
+type DishRow = { id: number; meal_id: number; recipe_id: number; title: string; servings: number | null; versions_from_guests: number };
+type GuestRow = { id: number; name: string | null; count: number; diets: string; note: string | null };
+
+const toGuest = (g: GuestRow): Guest & { id: number } => ({ ...g, diets: dietsFromColumn(g.diets) });
 
 /** The whole plan for one retreat: days with meals with dishes and their versions. */
 async function loadRetreat(db: D1Database, id: number) {
   const retreat = await getRetreatRow(db, id);
-  const [meals, dishes, dishAlts, available] = await Promise.all([
+  const [meals, dishes, dishAlts, available, guestRows, tags] = await Promise.all([
     db.prepare("SELECT * FROM meals WHERE retreat_id = ? ORDER BY date, position, id").bind(id).all<MealRow>(),
     db
       .prepare(
-        `SELECT d.id, d.meal_id, d.recipe_id, r.title, d.servings
+        `SELECT d.id, d.meal_id, d.recipe_id, r.title, d.servings, d.versions_from_guests
          FROM meal_dishes d JOIN meals m ON m.id = d.meal_id JOIN recipes r ON r.id = d.recipe_id
          WHERE m.retreat_id = ? ORDER BY d.id`,
       )
@@ -164,12 +168,28 @@ async function loadRetreat(db: D1Database, id: number) {
       )
       .bind(id)
       .all<{ id: number; recipe_id: number; label: string }>(),
+    db.prepare("SELECT id, name, count, diets, note FROM retreat_guests WHERE retreat_id = ? ORDER BY id").bind(id).all<GuestRow>(),
+    db
+      .prepare(
+        `SELECT t.recipe_id, t.alternative_id, t.tag, t.value FROM recipe_diet_tags t
+         WHERE t.recipe_id IN (SELECT d.recipe_id FROM meal_dishes d JOIN meals m ON m.id = d.meal_id WHERE m.retreat_id = ?)`,
+      )
+      .bind(id)
+      .all<{ recipe_id: number; alternative_id: number | null; tag: string; value: number }>(),
   ]);
 
+  const guests = guestRows.results.map(toGuest);
+  const fromGuests = guestAlternatives(guests, dishes.results, available.results, tags.results);
+  const labelOf = (altId: number) => available.results.find((a) => a.id === altId)?.label ?? "Alternative";
+
   const shapeDish = (d: DishRow, people: number) => {
-    const alternatives = dishAlts.results
-      .filter((x) => x.meal_dish_id === d.id)
-      .map(({ alternative_id, label, servings }) => ({ alternative_id, label, servings }));
+    const alternatives = d.versions_from_guests
+      ? fromGuests.rows
+          .filter((x) => x.meal_dish_id === d.id)
+          .map(({ alternative_id, servings }) => ({ alternative_id, label: labelOf(alternative_id), servings }))
+      : dishAlts.results
+          .filter((x) => x.meal_dish_id === d.id)
+          .map(({ alternative_id, label, servings }) => ({ alternative_id, label, servings }));
     const taken = alternatives.reduce((sum, a) => sum + a.servings, 0);
     return {
       id: d.id,
@@ -177,7 +197,10 @@ async function loadRetreat(db: D1Database, id: number) {
       title: d.title,
       servings: d.servings,
       main_servings: d.servings ?? Math.max(0, people - taken),
+      versions_from_guests: d.versions_from_guests === 1,
       alternatives,
+      // People on the dietary list that no version of this dish suits.
+      unmatched: (fromGuests.unmatched.get(d.id) ?? []).map(({ name, count, diets }) => ({ name, count, diets })),
       available_alternatives: available.results.filter((a) => a.recipe_id === d.recipe_id).map(({ id, label }) => ({ id, label })),
     };
   };
@@ -199,7 +222,13 @@ async function loadRetreat(db: D1Database, id: number) {
   }
 
   const days = dateRange(retreat.start_date, retreat.end_date).map((date) => ({ date, meals: mealsByDate.get(date) ?? [] }));
-  return { ...retreat, days };
+  return {
+    ...retreat,
+    guests,
+    guest_total: guests.reduce((sum, g) => sum + g.count, 0),
+    diet_counts: dietCounts(guests),
+    days,
+  };
 }
 
 function insertMealStatements(db: D1Database, retreatId: number, dates: string[]) {
@@ -328,8 +357,8 @@ retreats.post("/:id/duplicate", async (c) => {
         .bind(newId, source.id, `${shift >= 0 ? "+" : ""}${shift} days`),
       db
         .prepare(
-          `INSERT INTO meal_dishes (meal_id, recipe_id, servings)
-           SELECT nm.id, d.recipe_id, d.servings FROM meal_dishes d
+          `INSERT INTO meal_dishes (meal_id, recipe_id, servings, versions_from_guests)
+           SELECT nm.id, d.recipe_id, d.servings, d.versions_from_guests FROM meal_dishes d
            JOIN (${ranked("meals", "?2")}) om ON om.id = d.meal_id
            JOIN (${ranked("meals", "?1")}) nm ON nm.n = om.n
            ORDER BY d.id`,
@@ -452,7 +481,10 @@ retreats.put("/dishes/:dishId", async (c) => {
       if (!allowed.has(altId)) throw new HttpError(400, "That version doesn't belong to this dish's recipe.");
       wanted.set(altId, parseWhole(entry.servings, "Servings", 0, 1000));
     }
-    statements.push(db.prepare("DELETE FROM meal_dish_alternatives WHERE meal_dish_id = ?").bind(dish.id));
+    statements.push(
+      db.prepare("DELETE FROM meal_dish_alternatives WHERE meal_dish_id = ?").bind(dish.id),
+      db.prepare("UPDATE meal_dishes SET versions_from_guests = 0 WHERE id = ?").bind(dish.id),
+    );
     for (const [altId, servings] of wanted) {
       if (servings > 0) {
         statements.push(
@@ -460,6 +492,14 @@ retreats.put("/dishes/:dishId", async (c) => {
         );
       }
     }
+  }
+
+  // Hand the versions back to the dietary list, dropping the chef's numbers.
+  if (body.versions_from_guests === true && body.alternatives === undefined) {
+    statements.push(
+      db.prepare("DELETE FROM meal_dish_alternatives WHERE meal_dish_id = ?").bind(dish.id),
+      db.prepare("UPDATE meal_dishes SET versions_from_guests = 1 WHERE id = ?").bind(dish.id),
+    );
   }
 
   if (statements.length) await db.batch(statements);
@@ -470,6 +510,98 @@ retreats.delete("/dishes/:dishId", async (c) => {
   const dish = await getDish(c.env.DB, parseId(c.req.param("dishId")));
   await c.env.DB.prepare("DELETE FROM meal_dishes WHERE id = ?").bind(dish.id).run();
   return c.json(await loadRetreat(c.env.DB, dish.retreat_id));
+});
+
+// ---- dietary list ---------------------------------------------------------
+
+const MAX_GUEST_ROWS = 300;
+
+function parseGuest(body: Record<string, unknown>, current?: Guest): Guest {
+  const name = body.name === undefined ? (current?.name ?? null) : parseText(body.name, "The name");
+  const count = body.count === undefined ? (current?.count ?? 1) : parseWhole(body.count, "How many", 1, 200);
+  const note = body.note === undefined ? (current?.note ?? null) : parseText(body.note, "The note");
+  let diets = current?.diets ?? [];
+  if (body.diets !== undefined) {
+    if (!Array.isArray(body.diets) || body.diets.some((d) => !(DIETS as readonly unknown[]).includes(d))) {
+      throw new HttpError(400, `Diets must be a list of: ${DIETS.join(", ")}.`);
+    }
+    diets = sortDiets(body.diets as string[]);
+  }
+  if (name && count > 1) throw new HttpError(400, "A named person counts as one. Leave the name empty for a group.");
+  if (!diets.length && !note) throw new HttpError(400, "Pick at least one diet or write a note.");
+  return { name, count, diets, note };
+}
+
+function insertGuests(db: D1Database, retreatId: number, guests: Guest[]) {
+  // D1 allows 100 bound values per statement: 15 rows of 5 values each.
+  const statements: D1PreparedStatement[] = [];
+  for (let i = 0; i < guests.length; i += 15) {
+    const part = guests.slice(i, i + 15);
+    statements.push(
+      db
+        .prepare(`INSERT INTO retreat_guests (retreat_id, name, count, diets, note) VALUES ${part.map(() => "(?, ?, ?, ?, ?)").join(", ")}`)
+        .bind(...part.flatMap((g) => [retreatId, g.name, g.count, g.diets.join(","), g.note])),
+    );
+  }
+  return statements;
+}
+
+async function getGuestRow(db: D1Database, id: number) {
+  const row = await db.prepare("SELECT * FROM retreat_guests WHERE id = ?").bind(id).first<GuestRow & { retreat_id: number }>();
+  if (!row) throw new HttpError(404, "Person not found on the dietary list.");
+  return row;
+}
+
+async function guestRowCount(db: D1Database, retreatId: number) {
+  const row = await db.prepare("SELECT COUNT(*) AS n FROM retreat_guests WHERE retreat_id = ?").bind(retreatId).first<{ n: number }>();
+  return row?.n ?? 0;
+}
+
+retreats.post("/:id/guests", async (c) => {
+  const db = c.env.DB;
+  const retreat = await getRetreatRow(db, parseId(c.req.param("id")));
+  const guest = parseGuest(await readBody(c));
+  if ((await guestRowCount(db, retreat.id)) >= MAX_GUEST_ROWS) throw new HttpError(400, `The list can hold at most ${MAX_GUEST_ROWS} rows.`);
+  await db.batch(insertGuests(db, retreat.id, [guest]));
+  return c.json(await loadRetreat(db, retreat.id), 201);
+});
+
+// Reads a pasted list. With preview it only answers what it read; otherwise it
+// adds the people (or replaces the list) and answers with the retreat.
+retreats.post("/:id/guests/import", async (c) => {
+  const db = c.env.DB;
+  const retreat = await getRetreatRow(db, parseId(c.req.param("id")));
+  const body = await readBody(c);
+  if (typeof body.text !== "string" || !body.text.trim()) throw new HttpError(400, "Paste a list first.");
+  const { guests, skipped } = parseGuestList(body.text);
+  if (body.preview === true) return c.json({ guests, skipped, diet_counts: dietCounts(guests) });
+  if (!guests.length) throw new HttpError(400, "No dietary needs found in that list.");
+
+  const replace = body.replace === true;
+  const existing = replace ? 0 : await guestRowCount(db, retreat.id);
+  if (existing + guests.length > MAX_GUEST_ROWS) throw new HttpError(400, `The list can hold at most ${MAX_GUEST_ROWS} rows.`);
+  await db.batch([
+    ...(replace ? [db.prepare("DELETE FROM retreat_guests WHERE retreat_id = ?").bind(retreat.id)] : []),
+    ...insertGuests(db, retreat.id, guests),
+  ]);
+  return c.json({ ...(await loadRetreat(db, retreat.id)), skipped }, 201);
+});
+
+retreats.put("/guests/:guestId", async (c) => {
+  const db = c.env.DB;
+  const row = await getGuestRow(db, parseId(c.req.param("guestId")));
+  const guest = parseGuest(await readBody(c), toGuest(row));
+  await db
+    .prepare("UPDATE retreat_guests SET name = ?, count = ?, diets = ?, note = ? WHERE id = ?")
+    .bind(guest.name, guest.count, guest.diets.join(","), guest.note, row.id)
+    .run();
+  return c.json(await loadRetreat(db, row.retreat_id));
+});
+
+retreats.delete("/guests/:guestId", async (c) => {
+  const row = await getGuestRow(c.env.DB, parseId(c.req.param("guestId")));
+  await c.env.DB.prepare("DELETE FROM retreat_guests WHERE id = ?").bind(row.id).run();
+  return c.json(await loadRetreat(c.env.DB, row.retreat_id));
 });
 
 export default retreats;

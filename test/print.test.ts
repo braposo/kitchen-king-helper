@@ -26,6 +26,7 @@ async function seed(env: ReturnType<typeof testEnv>) {
   );
   await run(db, "INSERT INTO meal_dishes (id, meal_id, recipe_id, servings) VALUES (1, 1, 1, NULL), (2, 2, 2, NULL), (3, 3, 2, NULL)");
   await run(db, "INSERT INTO meal_dish_alternatives (meal_dish_id, alternative_id, servings) VALUES (1, 1, 3)");
+  await run(db, "UPDATE meal_dishes SET versions_from_guests = 0 WHERE id = 1"); // the chef typed the versions
   return env;
 }
 

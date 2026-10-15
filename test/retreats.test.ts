@@ -248,3 +248,86 @@ describe("dishes", () => {
     expect((await call(app, env, "POST", "/api/retreats/meals/1/dishes", {})).status).toBe(400);
   });
 });
+
+describe("dietary list", () => {
+  it("adds, edits and removes people and counts each diet", async () => {
+    const { env } = await setup();
+    const added = await call(app, env, "POST", "/api/retreats/1/guests", { name: "Tom", diets: ["vegan"], note: "no mushrooms" });
+    expect(added.status).toBe(201);
+    await call(app, env, "POST", "/api/retreats/1/guests", { count: 2, diets: ["gluten_free", "vegan"] });
+    const res = await call(app, env, "GET", "/api/retreats/1");
+    expect(res.body.guests).toEqual([
+      { id: 1, name: "Tom", count: 1, diets: ["vegan"], note: "no mushrooms" },
+      { id: 2, name: null, count: 2, diets: ["vegan", "gluten_free"], note: null },
+    ]);
+    expect(res.body.guest_total).toBe(3);
+    expect(res.body.diet_counts.map((d: any) => [d.diet, d.count])).toEqual([["vegan", 3], ["gluten_free", 2]]);
+
+    const edited = await call(app, env, "PUT", "/api/retreats/guests/1", { diets: ["dairy_free"] });
+    expect(edited.body.guests[0]).toMatchObject({ name: "Tom", diets: ["dairy_free"], note: "no mushrooms" });
+    const removed = await call(app, env, "DELETE", "/api/retreats/guests/2");
+    expect(removed.body.guests).toHaveLength(1);
+  });
+
+  it("rejects bad people", async () => {
+    const { env } = await setup();
+    const post = (body: object) => call(app, env, "POST", "/api/retreats/1/guests", body);
+    expect((await post({ name: "Tom", diets: [] })).status).toBe(400);
+    expect((await post({ diets: ["keto"] })).status).toBe(400);
+    expect((await post({ name: "Tom", count: 2, diets: ["vegan"] })).status).toBe(400);
+    expect((await post({ count: 0, diets: ["vegan"] })).status).toBe(400);
+    expect((await call(app, env, "PUT", "/api/retreats/guests/9", { diets: ["vegan"] })).status).toBe(404);
+  });
+
+  it("previews, adds and replaces a pasted list", async () => {
+    const { env } = await setup();
+    const text = "Tom - vegan\nSam: gluten free\nBernardo\n2 dairy free";
+    const preview = await call(app, env, "POST", "/api/retreats/1/guests/import", { text, preview: true });
+    expect(preview.body.guests).toHaveLength(3);
+    expect(preview.body.skipped).toEqual(["Bernardo"]);
+    expect((await call(app, env, "GET", "/api/retreats/1")).body.guests).toEqual([]);
+
+    const added = await call(app, env, "POST", "/api/retreats/1/guests/import", { text });
+    expect(added.status).toBe(201);
+    expect(added.body.guest_total).toBe(4);
+    const again = await call(app, env, "POST", "/api/retreats/1/guests/import", { text });
+    expect(again.body.guests).toHaveLength(6);
+    const replaced = await call(app, env, "POST", "/api/retreats/1/guests/import", { text: "3 vegan", replace: true });
+    expect(replaced.body.guests).toMatchObject([{ name: null, count: 3, diets: ["vegan"], note: null }]);
+
+    expect((await call(app, env, "POST", "/api/retreats/1/guests/import", { text: "Bernardo" })).status).toBe(400);
+  });
+
+  it("fills dish versions from the list until the chef types their own", async () => {
+    const { env } = await setup();
+    await call(app, env, "POST", "/api/retreats/1/guests/import", { text: "3 vegan\nJo - coeliac\nLuis - nut allergy" });
+    const added = await call(app, env, "POST", "/api/retreats/meals/3/dishes", { recipe_id: 1 });
+    let dish = meal(added.body, 0, 2).dishes[0];
+    expect(dish).toMatchObject({ versions_from_guests: true, main_servings: 16 });
+    expect(dish.alternatives).toEqual([
+      { alternative_id: 1, label: "Vegan", servings: 3 },
+      { alternative_id: 2, label: "Gluten free", servings: 1 },
+    ]);
+    expect(dish.unmatched).toEqual([{ name: "Luis", count: 1, diets: ["nut_free"] }]);
+
+    const typed = await call(app, env, "PUT", `/api/retreats/dishes/${dish.id}`, { alternatives: [{ alternative_id: 1, servings: 5 }] });
+    dish = meal(typed.body, 0, 2).dishes[0];
+    expect(dish).toMatchObject({ versions_from_guests: false, main_servings: 15, unmatched: [] });
+
+    // More people on the list don't change a dish the chef has set.
+    await call(app, env, "POST", "/api/retreats/1/guests", { count: 2, diets: ["vegan"] });
+    const back = await call(app, env, "PUT", `/api/retreats/dishes/${dish.id}`, { versions_from_guests: true });
+    dish = meal(back.body, 0, 2).dishes[0];
+    expect(dish).toMatchObject({ versions_from_guests: true, main_servings: 14 });
+    expect(dish.alternatives[0]).toMatchObject({ label: "Vegan", servings: 5 });
+  });
+
+  it("keeps a duplicated retreat's dishes following the list, without copying the people", async () => {
+    const { env } = await setup();
+    await call(app, env, "POST", "/api/retreats/1/guests", { count: 2, diets: ["vegan"] });
+    await call(app, env, "POST", "/api/retreats/meals/3/dishes", { recipe_id: 1 });
+    const copy = await call(app, env, "POST", "/api/retreats/1/duplicate", { name: "Winter", start_date: "2026-01-09" });
+    expect(copy.body.guests).toEqual([]);
+    expect(meal(copy.body, 0, 2).dishes[0]).toMatchObject({ versions_from_guests: true, main_servings: 20 });
+  });
+});

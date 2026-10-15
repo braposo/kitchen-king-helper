@@ -59,3 +59,14 @@ Decisions taken while building the MVP without input from Bernardo or the chef. 
 - Jev looks at a recipe again after every save of it, and once after a new recipe or import is saved. Its answers never wait on the save.
 - Choosing "Let Jev suggest" for the category clears the chef's choice and asks Jev again straight away.
 - Suggested dishes are only fetched when the chef taps "Suggest dishes" on an empty meal, so opening a retreat costs no Jev calls.
+
+## Dietary list per retreat
+
+- Each row on the list is one named person or a group with no name ("3 vegan"). A named row always counts as one person. People with no dietary need aren't listed; they're the rest of the headcount.
+- Everyone on the list is assumed to eat at every meal; the list doesn't follow per-meal headcount changes, though Main still can't go below zero.
+- Diets on the list are vegetarian, vegan, gluten-free, dairy-free and nut-free. Anything else goes in the person's note, which is shown but doesn't change quantities.
+- A person eats the main version when its diet tags suit all their diets, else the alternative that suits them with the fewest other restrictions. A vegan version counts as vegetarian and dairy-free. An alternative with no tag for a diet uses its name, so "Vegan" counts as vegan before it is tagged. Tags marked "check this" count the same as confirmed ones.
+- If no version suits someone, they're counted in Main and the dish shows a warning naming them.
+- Dishes follow the list until the chef types a version number; "Use the dietary list" hands them back. Dishes that already had typed version numbers before this change keep them.
+- Pasted lines with no diet word and no note (a bare name) are skipped and listed so the chef can see them. Importing adds to the list unless "Replace the current list" is ticked.
+- Duplicating a retreat copies the dishes (still following the list) but not the people, since each retreat has its own group.
