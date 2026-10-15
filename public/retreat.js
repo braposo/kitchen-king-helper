@@ -1,4 +1,4 @@
-import { api, escape, qs, toast } from "/lib.js";
+import { api, escape, icon, qs, toast, busy, confirmDialog } from "/lib.js";
 import { fetchSuggestions } from "/jev.js";
 
 const app = document.getElementById("app");
@@ -8,6 +8,8 @@ let recipes = null; // loaded the first time a picker opens
 
 const dayFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 const dayLabel = (date) => dayFmt.format(new Date(date)).replace(",", "");
+const shortFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const SLOTS = ["brunch", "snacks", "dinner"];
 // Same keys and labels as DIETS in src/lib/diets.ts.
 const DIETS = [
@@ -23,63 +25,101 @@ const dietLabel = (key) => DIETS.find(([k]) => k === key)?.[1] ?? key;
 
 function render() {
   const r = retreat;
-  // Keep the dietary list's sections open across re-renders.
+  // Keep the open collapsibles open across re-renders.
   const open = new Set([...app.querySelectorAll("details[data-keep][open]")].map((d) => d.dataset.keep));
   document.title = `${r.name} · Kitchen King`;
+  const range = r.start_date === r.end_date ? shortFmt.format(new Date(r.start_date)) : `${shortFmt.format(new Date(r.start_date))} – ${shortFmt.format(new Date(r.end_date))}`;
   app.innerHTML = `
-    <section class="card">
-      <h2>${escape(r.name)}</h2>
-      <p class="muted">${escape(dayLabel(r.start_date))} – ${escape(dayLabel(r.end_date))} · ${r.headcount} people · ${r.buffer_percent}% buffer</p>
-      <p class="row">
-        <a class="button" href="/orders.html?retreat=${r.id}">Order lists</a>
-        <a class="button secondary" href="/retreats.html">All retreats</a>
-      </p>
-      <details>
-        <summary>Edit retreat</summary>
-        <form id="edit-form">
-          <label>Name</label><input name="name" required value="${escape(r.name)}">
-          <label>First day</label><input name="start_date" type="date" required value="${r.start_date}">
-          <label>Last day</label><input name="end_date" type="date" required value="${r.end_date}">
-          <label>People</label><input name="headcount" type="number" inputmode="numeric" min="1" max="200" required value="${r.headcount}">
-          <label>Buffer %</label><input name="buffer_percent" type="number" inputmode="numeric" min="0" max="100" required value="${r.buffer_percent}">
-          <p class="row"><button type="submit">Save</button><button type="button" class="danger" data-action="delete-retreat">Delete retreat</button></p>
-        </form>
+    <div class="page-header">
+      <div>
+        <a class="back-link" href="/retreats.html">${icon("chevron-left")}Retreats</a>
+        <h1>${escape(r.name)}</h1>
+        <div class="meta-row" style="margin-top:0.5rem">
+          <span>${icon("calendar")}${escape(range)}</span>
+          <span>${icon("users")}${r.headcount} people</span>
+          <span>${r.buffer_percent}% extra food</span>
+        </div>
+      </div>
+      <div class="actions">
+        <a class="btn" href="/orders.html?retreat=${r.id}">${icon("shopping-basket")}Order lists</a>
+        <a class="btn btn-outline" href="/print-recipes.html?retreat=${r.id}">${icon("book-open")}Recipe cards</a>
+      </div>
+    </div>
+    <section class="card card-tight">
+      <details class="collapsible" data-keep="edit"${open.has("edit") ? " open" : ""}>
+        <summary><span class="summary-label">${icon("pencil")}Edit retreat</span></summary>
+        <div class="collapsible-body">
+          <form id="edit-form">
+            <div class="field"><label for="edit-name">Name</label><input id="edit-name" name="name" required value="${escape(r.name)}"></div>
+            <div class="grid-2">
+              <div class="field"><label for="edit-start">First day</label><input id="edit-start" name="start_date" type="date" required value="${r.start_date}"></div>
+              <div class="field"><label for="edit-end">Last day</label><input id="edit-end" name="end_date" type="date" required value="${r.end_date}"></div>
+            </div>
+            <div class="grid-2">
+              <div class="field"><label for="edit-people">People</label><input id="edit-people" name="headcount" type="number" inputmode="numeric" min="1" max="200" required value="${r.headcount}"></div>
+              <div class="field"><label for="edit-buffer">Extra food</label><div class="input-group"><input id="edit-buffer" name="buffer_percent" type="number" inputmode="numeric" min="0" max="100" required value="${r.buffer_percent}"><span class="input-addon">%</span></div></div>
+            </div>
+            <div class="actions spread">
+              <button type="submit" class="btn">Save</button>
+              <button type="button" class="btn btn-ghost-destructive" data-action="delete-retreat">${icon("trash-2")}Delete retreat</button>
+            </div>
+          </form>
+        </div>
       </details>
     </section>
     ${renderDiets(open)}
-    ${r.days.map(renderDay).join("")}`;
+    ${r.days.map((d) => renderDay(d, open)).join("")}`;
 }
 
 function renderDiets(open) {
   const r = retreat;
+  const description = r.guests.length
+    ? `${plural(r.guest_total, "person", "people")} on the list, so dishes get the right versions.`
+    : "Nobody listed yet. Add the people with dietary needs and dishes will get the right versions.";
   const summary = r.diet_counts.length
-    ? r.diet_counts.map((d) => `<span class="badge">${d.count} ${escape(d.label.toLowerCase())}</span>`).join("")
-    : `<span class="muted">Nobody listed yet. Add the people with dietary needs and dishes will get the right versions.</span>`;
+    ? `<div class="badges">${r.diet_counts.map((d) => `<span class="badge badge-secondary">${d.count} ${escape(d.label.toLowerCase())}</span>`).join("")}</div>`
+    : "";
   const over = r.guest_total > r.headcount
-    ? `<p class="warn">The list has ${r.guest_total} people but the retreat is set for ${r.headcount}.</p>`
+    ? `<div class="alert alert-warning">${icon("circle-alert")}<p class="alert-title">More people than the retreat</p><p class="alert-description">The list has ${r.guest_total} people but the retreat is set for ${r.headcount}.</p></div>`
     : "";
   return `
     <section class="card" id="diets">
-      <h2>Dietary needs</h2>
-      <p>${summary}</p>
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Dietary needs</h2>
+          <p class="card-description">${description}</p>
+        </div>
+      </div>
+      ${summary}
       ${over}
-      <details data-keep="people"${open.has("people") ? " open" : ""}>
-        <summary>People (${r.guests.length})</summary>
-        ${r.guests.map((g) => renderGuest(g, open)).join("")}
-        <form class="guest" id="add-guest">
-          <strong>Add someone</strong>
-          ${guestFields({ name: "", count: 1, diets: [], note: "" }, "new")}
-          <p class="row"><button type="submit">Add</button></p>
-        </form>
-      </details>
-      <details data-keep="paste"${open.has("paste") ? " open" : ""}>
-        <summary>Paste a list</summary>
-        <p class="muted">One person per line, like "Tom - vegan", "Sam: gluten free, no mushrooms" or "3 dairy free". Names are optional.</p>
-        <textarea id="guest-paste" aria-label="Pasted list"></textarea>
-        <label class="inline"><input type="checkbox" id="guest-replace"> Replace the current list</label>
-        <p class="row"><button class="secondary" data-action="preview-guests">Check list</button></p>
-        <div id="guest-preview"></div>
-      </details>
+      <div class="accordion">
+        <details class="collapsible" data-keep="people"${open.has("people") ? " open" : ""}>
+          <summary><span class="summary-label">${icon("users")}People</span><span class="summary-meta">${r.guests.length}</span></summary>
+          <div class="collapsible-body">
+            <div class="guest-list">${r.guests.map((g) => renderGuest(g, open)).join("")}</div>
+            <form id="add-guest">
+              <span class="form-title">Add someone</span>
+              ${guestFields({ name: "", count: 1, diets: [], note: "" }, "new")}
+              <div><button type="submit" class="btn btn-sm">${icon("user-plus")}Add to the list</button></div>
+            </form>
+          </div>
+        </details>
+        <details class="collapsible" data-keep="paste"${open.has("paste") ? " open" : ""}>
+          <summary><span class="summary-label">${icon("clipboard-paste")}Paste a list</span></summary>
+          <div class="collapsible-body">
+            <div class="field">
+              <label for="guest-paste">Pasted list</label>
+              <textarea id="guest-paste" placeholder="Tom - vegan&#10;Sam: gluten free, no mushrooms&#10;3 dairy free"></textarea>
+              <p class="field-description">One person per line. Names are optional.</p>
+            </div>
+            <div class="actions spread">
+              <label class="check"><input type="checkbox" id="guest-replace"> Replace the current list</label>
+              <button class="btn btn-outline btn-sm" data-action="preview-guests">Check list</button>
+            </div>
+            <div id="guest-preview"></div>
+          </div>
+        </details>
+      </div>
     </section>`;
 }
 
@@ -87,26 +127,30 @@ function renderDiets(open) {
 function guestFields(g, key) {
   const named = Boolean(g.name);
   return `
-    <div class="row">
-      <input data-guest="name" value="${escape(g.name ?? "")}" placeholder="Name (optional)" aria-label="Name" class="grow">
-      <label class="inline${named ? " hidden" : ""}">× <input data-guest="count" type="number" inputmode="numeric" min="1" max="200" value="${g.count}" aria-label="How many people"></label>
+    <div class="fields">
+      <input data-guest="name" value="${escape(g.name ?? "")}" placeholder="Name (optional)" aria-label="Name" autocomplete="off">
+      <div class="input-group count-wrap${named ? " hidden" : ""}"><input data-guest="count" type="number" inputmode="numeric" min="1" max="200" value="${g.count}" aria-label="How many people"><span class="input-addon">people</span></div>
     </div>
-    <div class="diet-picks">
+    <div class="toggle-group">
       ${DIETS.map(
         ([k, label]) =>
-          `<label class="inline"><input type="checkbox" data-guest="diet" value="${k}"${g.diets.includes(k) ? " checked" : ""} id="diet-${key}-${k}"> ${label}</label>`,
+          `<label class="toggle"><input type="checkbox" data-guest="diet" value="${k}"${g.diets.includes(k) ? " checked" : ""} id="diet-${key}-${k}">${label}</label>`,
       ).join("")}
     </div>
-    <input data-guest="note" value="${escape(g.note ?? "")}" placeholder="Anything else (no mushrooms, allergies…)" aria-label="Note">`;
+    <input data-guest="note" value="${escape(g.note ?? "")}" placeholder="Anything else (no mushrooms, allergies…)" aria-label="Note" autocomplete="off">`;
 }
 
 function renderGuest(g, open) {
   const key = `guest-${g.id}`;
+  const who = g.name ? escape(g.name) : plural(g.count, "person", "people");
+  const needs = [...g.diets.map(dietLabel), ...(g.note ? [g.note] : [])].map(escape).join(", ");
   return `
-    <details class="guest" data-guest-id="${g.id}" data-keep="${key}"${open.has(key) ? " open" : ""}>
-      <summary>${describeGuest(g)}</summary>
-      ${guestFields(g, g.id)}
-      <p class="row"><button class="linklike" data-action="delete-guest">Remove from the list</button></p>
+    <details class="collapsible guest" data-guest-id="${g.id}" data-keep="${key}"${open.has(key) ? " open" : ""}>
+      <summary><span class="g-main"><span>${who}</span><span class="g-needs">${needs || "No dietary need"}</span></span></summary>
+      <div class="guest-body">
+        ${guestFields(g, g.id)}
+        <div class="guest-actions"><button type="button" class="btn btn-ghost-destructive btn-sm" data-action="delete-guest">${icon("trash-2")}Remove from the list</button></div>
+      </div>
     </details>`;
 }
 
@@ -137,64 +181,91 @@ async function previewGuests() {
     const replace = document.getElementById("guest-replace").checked;
     pendingImport = { text, replace };
     box.innerHTML = `
-      ${result.guests.length ? `<ul>${result.guests.map((g) => `<li>${describeGuest(g)}</li>`).join("")}</ul>` : `<p class="warn">No dietary needs found in that list.</p>`}
-      ${result.skipped.length ? `<p class="warn">Skipped (no dietary need found): ${result.skipped.map(escape).join(", ")}</p>` : ""}
-      ${result.guests.length ? `<p class="row"><button data-action="import-guests">${replace ? "Replace the list with these" : `Add ${result.guests.length} to the list`}</button></p>` : ""}`;
+      ${result.guests.length ? `<ul>${result.guests.map((g) => `<li>${describeGuest(g)}</li>`).join("")}</ul>` : `<div class="alert alert-warning">${icon("circle-alert")}<p class="alert-title">No dietary needs found in that list</p></div>`}
+      ${result.skipped.length ? `<div class="alert alert-warning">${icon("circle-alert")}<p class="alert-title">Skipped, no dietary need found</p><p class="alert-description">${result.skipped.map(escape).join(", ")}</p></div>` : ""}
+      ${result.guests.length ? `<div><button class="btn btn-sm" data-action="import-guests">${replace ? "Replace the list with these" : `Add ${result.guests.length} to the list`}</button></div>` : ""}`;
   } catch (err) {
     toast(err.message, { error: true });
   }
 }
 
-function renderDay(day) {
+function renderDay(day, open) {
+  const dishes = day.meals.reduce((n, m) => n + m.dishes.length, 0);
   return `
-    <section class="card" data-date="${day.date}">
-      <div class="spread">
-        <h2>${escape(dayLabel(day.date))}</h2>
-        <a class="no-print" href="/print-day.html?retreat=${retreat.id}&date=${day.date}">Print day sheet</a>
+    <section class="card day-card" data-date="${day.date}">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title day-title">${escape(dayLabel(day.date))}</h2>
+          <p class="card-description">${plural(day.meals.length, "meal", "meals")} · ${plural(dishes, "dish", "dishes")}</p>
+        </div>
+        <a class="btn btn-outline btn-sm no-print" href="/print-day.html?retreat=${retreat.id}&date=${day.date}">${icon("printer")}Day sheet</a>
       </div>
-      ${day.meals.map((m) => renderMeal(m, day.date)).join("")}
-      <details>
-        <summary>Add meal</summary>
-        <div class="row">
-          <select data-add-slot>${[...SLOTS, "other"].map((s) => `<option value="${s}">${s}</option>`).join("")}</select>
-          <input data-add-custom placeholder="Name (for other)">
-          <button data-action="add-meal" data-date="${day.date}">Add</button>
+      ${day.meals.map((m) => renderMeal(m, day.date, open)).join("")}
+      <details class="collapsible add-meal" data-keep="add-meal-${day.date}"${open.has(`add-meal-${day.date}`) ? " open" : ""}>
+        <summary><span class="summary-label">${icon("plus")}Add meal</span></summary>
+        <div class="collapsible-body">
+          <div class="add-meal-row">
+            <select data-add-slot aria-label="Meal">${[...SLOTS, "other"].map((s) => `<option value="${s}">${s}</option>`).join("")}</select>
+            <input class="grow hidden" data-add-custom placeholder="Name of the meal" aria-label="Name of the meal">
+            <button class="btn btn-sm" data-action="add-meal" data-date="${day.date}">Add</button>
+          </div>
         </div>
       </details>
     </section>`;
 }
 
-function renderMeal(m, date) {
+function renderMeal(m, date, open) {
   const dayOptions = retreat.days
     .map((d) => `<option value="${d.date}"${d.date === date ? " selected" : ""}>${escape(dayLabel(d.date))}</option>`)
     .join("");
   const slotOptions = [...new Set([m.slot, ...SLOTS])].map((s) => `<option value="${escape(s)}"${s === m.slot ? " selected" : ""}>${escape(s)}</option>`).join("");
+  const people = m.headcount ?? retreat.headcount;
+  const toolsKey = `meal-${m.id}`;
   return `
     <div class="meal" data-meal-id="${m.id}">
       <div class="meal-head">
-        <span class="slot">${escape(m.slot)}</span>
-        <input data-field="time" value="${escape(m.time_label ?? "")}" placeholder="time" aria-label="Time for ${escape(m.slot)}">
-      </div>
-      <div class="people">
-        <label for="people-${m.id}" style="margin:0">People</label>
-        <input id="people-${m.id}" data-field="people" type="number" inputmode="numeric" min="1" max="200" value="${m.headcount ?? ""}" placeholder="${retreat.headcount}">
-        ${m.headcount === null ? `<span class="muted">(retreat default)</span>` : `<button class="linklike" data-action="reset-people">reset to ${retreat.headcount}</button>`}
-      </div>
-      ${m.dishes.length ? m.dishes.map(renderDish).join("") : `<div class="suggestions" data-meal-id="${m.id}"><button class="secondary" data-action="suggest-dishes">Suggest dishes</button></div>`}
-      <details data-picker>
-        <summary>Add dish</summary>
-        <input data-picker-search type="search" placeholder="Search recipes" aria-label="Search recipes">
-        <ul class="picker-list"></ul>
-      </details>
-      <details>
-        <summary>Move or delete</summary>
-        <div class="row">
-          <select data-move-date aria-label="Day">${dayOptions}</select>
-          <select data-move-slot aria-label="Slot">${slotOptions}</select>
-          <button class="secondary" data-action="move-meal">Move</button>
-          <button class="danger" data-action="delete-meal">Delete meal</button>
+        <div>
+          <h3 class="meal-name">${escape(m.slot)}</h3>
+          <p class="meal-sub">${plural(people, "person", "people")}${m.headcount === null ? "" : " (changed)"}</p>
         </div>
-      </details>
+        <div class="meal-time"><input data-field="time" value="${escape(m.time_label ?? "")}" placeholder="Time" aria-label="Time for ${escape(m.slot)}" autocomplete="off"></div>
+      </div>
+      ${
+        m.dishes.length
+          ? `<div class="dishes">${m.dishes.map(renderDish).join("")}</div>`
+          : `<div class="suggestions" data-meal-id="${m.id}"><p class="meal-empty">No dishes yet.</p><button class="btn btn-outline btn-sm" data-action="suggest-dishes">${icon("sparkles")}Suggest dishes</button></div>`
+      }
+      <div class="meal-tools">
+        <details class="collapsible" data-picker>
+          <summary><span class="summary-label">${icon("plus")}Add dish</span></summary>
+          <div class="collapsible-body">
+            <div class="input-icon">${icon("search")}<input data-picker-search type="search" placeholder="Search recipes" aria-label="Search recipes" autocomplete="off"></div>
+            <ul class="picker-list item-list"></ul>
+          </div>
+        </details>
+        <details class="collapsible" data-keep="${toolsKey}"${open.has(toolsKey) ? " open" : ""}>
+          <summary><span class="summary-label">${icon("ellipsis")}Meal options</span></summary>
+          <div class="collapsible-body">
+            <div class="tool-block">
+              <div class="field">
+                <label for="people-${m.id}">People at this meal</label>
+                <div class="input-group"><input id="people-${m.id}" data-field="people" type="number" inputmode="numeric" min="1" max="200" value="${m.headcount ?? ""}" placeholder="${retreat.headcount}"><span class="input-addon">people</span></div>
+                <p class="field-description">${m.headcount === null ? "Using the retreat's number." : `The retreat has ${retreat.headcount}. <button class="btn btn-link" data-action="reset-people">Reset to ${retreat.headcount}</button>`}</p>
+              </div>
+            </div>
+            <div class="tool-block">
+              <div class="grid-2">
+                <div class="field"><label>Day</label><select data-move-date aria-label="Day">${dayOptions}</select></div>
+                <div class="field"><label>Meal</label><select data-move-slot aria-label="Slot">${slotOptions}</select></div>
+              </div>
+              <div class="spread">
+                <button class="btn btn-outline btn-sm" data-action="move-meal">Move meal</button>
+                <button class="btn btn-ghost-destructive btn-sm" data-action="delete-meal">${icon("trash-2")}Delete meal</button>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
     </div>`;
 }
 
@@ -202,31 +273,38 @@ function renderDish(d) {
   const alts = d.available_alternatives
     .map((a) => {
       const set = d.alternatives.find((x) => x.alternative_id === a.id);
-      return `<label>${escape(a.label)} <input data-field="alt" data-alt-id="${a.id}" type="number" inputmode="numeric" min="0" value="${set ? set.servings : ""}" placeholder="0"></label>`;
+      return `<div class="ver"><label for="alt-${d.id}-${a.id}" title="${escape(a.label)}">${escape(a.label)}</label><input id="alt-${d.id}-${a.id}" data-field="alt" data-alt-id="${a.id}" type="number" inputmode="numeric" min="0" value="${set ? set.servings : ""}" placeholder="0"></div>`;
     })
     .join("");
   return `
     <div class="dish" data-dish-id="${d.id}">
-      <div class="spread"><strong>${escape(d.title)}</strong><button class="linklike" data-action="delete-dish">Remove</button></div>
+      <div class="dish-head">
+        <span class="dish-title">${escape(d.title)}</span>
+        <button class="btn btn-ghost btn-icon btn-sm" data-action="delete-dish" aria-label="Remove ${escape(d.title)}" title="Remove">${icon("x")}</button>
+      </div>
       <div class="versions">
-        <label>Main <input data-field="main" type="number" inputmode="numeric" min="0" value="${d.servings ?? ""}" placeholder="${d.main_servings}"></label>
+        <div class="ver"><label for="main-${d.id}">Main${d.servings === null ? ` <span class="auto">auto</span>` : ""}</label><input id="main-${d.id}" data-field="main" type="number" inputmode="numeric" min="0" value="${d.servings ?? ""}" placeholder="${d.main_servings}"></div>
         ${alts}
       </div>
-      ${d.servings === null ? `<div class="muted">Main is automatic (${d.main_servings}). Type a number to set it yourself.</div>` : `<button class="linklike" data-action="auto-main">Back to automatic</button>`}
-      ${dishDietNote(d)}
+      ${dishNotes(d)}
     </div>`;
+}
+
+/** Notes under a dish, only when something differs from the automatic plan. */
+function dishNotes(d) {
+  const notes = (d.servings === null ? "" : `<span>Main set by you. <button class="btn btn-link" data-action="auto-main">Back to automatic</button></span>`) + dishDietNote(d);
+  return notes ? `<div class="dish-notes">${notes}</div>` : "";
 }
 
 /** Where the version numbers come from, and anyone on the dietary list no version suits. */
 function dishDietNote(d) {
   const hasList = retreat.guests.length > 0;
   let source = "";
-  if (d.versions_from_guests && hasList && d.available_alternatives.length) source = `<div class="muted">Versions follow the dietary list.</div>`;
-  if (!d.versions_from_guests && hasList) source = `<div class="muted">Versions set by you. <button class="linklike" data-action="versions-from-list">Use the dietary list</button></div>`;
+  if (!d.versions_from_guests && hasList) source = `<span>Versions set by you. <button class="btn btn-link" data-action="versions-from-list">Use the dietary list</button></span>`;
   const missing = d.unmatched.length
-    ? `<div class="warn">No version suits ${d.unmatched
+    ? `<span class="warn">${icon("circle-alert")}<span>No version suits ${d.unmatched
         .map((g) => `${g.name ? escape(g.name) : `${g.count} ×`} (${g.diets.map(dietLabel).join(", ")})`)
-        .join("; ")}. They're counted in Main.</div>`
+        .join("; ")}. They're counted in Main.</span></span>`
     : "";
   return source + missing;
 }
@@ -249,7 +327,9 @@ async function load() {
     retreat = await api(`/retreats/${id}`);
     render();
   } catch (err) {
-    app.innerHTML = `<p class="warn">Could not load this retreat (${escape(err.message)}). <a href="/retreats.html">Back to retreats</a></p>`;
+    app.innerHTML = `
+      <a class="back-link" href="/retreats.html">${icon("chevron-left")}Retreats</a>
+      <div class="alert alert-destructive">${icon("circle-alert")}<p class="alert-title">Couldn't load this retreat</p><p class="alert-description">${escape(err.message)}</p></div>`;
   }
 }
 
@@ -263,7 +343,12 @@ app.addEventListener("change", (e) => {
   if (guestRow && input.dataset.guest) return update(`/retreats/guests/${guestRow.dataset.guestId}`, "PUT", readGuest(guestRow));
   if (input.closest("#add-guest") && input.dataset.guest === "name") {
     // A named person counts as one, so hide the count.
-    input.closest("#add-guest").querySelector("[data-guest=count]").closest("label").classList.toggle("hidden", Boolean(input.value.trim()));
+    input.closest("#add-guest").querySelector(".count-wrap").classList.toggle("hidden", Boolean(input.value.trim()));
+    return;
+  }
+  if (input.matches("[data-add-slot]")) {
+    // The name box only matters for "other".
+    input.closest(".add-meal-row").querySelector("[data-add-custom]").classList.toggle("hidden", input.value !== "other");
     return;
   }
   const field = input.dataset.field;
@@ -310,8 +395,8 @@ function fillPicker(picker) {
   const term = picker.querySelector("[data-picker-search]").value.trim().toLowerCase();
   const matches = (recipes ?? []).filter((r) => r.title.toLowerCase().includes(term)).slice(0, 30);
   picker.querySelector(".picker-list").innerHTML = matches.length
-    ? matches.map((r) => `<li><button data-action="pick-recipe" data-recipe-id="${r.id}">${escape(r.title)}</button></li>`).join("")
-    : `<li class="muted">${recipes?.length ? "No recipe matches." : "No recipes yet."}</li>`;
+    ? matches.map((r) => `<li><button class="item" data-action="pick-recipe" data-recipe-id="${r.id}"><span class="item-content"><span class="item-title">${escape(r.title)}</span></span>${icon("plus")}</button></li>`).join("")
+    : `<li class="picker-empty">${recipes?.length ? "No recipe matches." : "No recipes yet."}</li>`;
 }
 
 app.addEventListener("click", async (e) => {
@@ -326,31 +411,29 @@ app.addEventListener("click", async (e) => {
   if (action === "suggest-dishes") {
     // Asked only when the chef taps, one meal at a time. Each suggestion is a button that adds the dish.
     const box = button.closest(".suggestions");
-    button.disabled = true;
-    button.textContent = "Asking Jev…";
     try {
-      const list = await fetchSuggestions(mealId);
-      box.innerHTML = list.length
-        ? `<div class="row">${list
-            .slice(0, 3)
-            .map((s) => `<button class="secondary" data-action="pick-recipe" data-recipe-id="${s.recipe_id}">＋ ${escape(s.title)}</button>`)
-            .join("")}</div>`
-        : `<p class="muted">No recipes fit this meal yet.</p>`;
+      await busy(button, async () => {
+        const list = await fetchSuggestions(mealId);
+        box.innerHTML = list.length
+          ? `<div class="badges">${list
+              .slice(0, 3)
+              .map((s) => `<button class="btn btn-secondary btn-sm" data-action="pick-recipe" data-recipe-id="${s.recipe_id}">${icon("plus")}${escape(s.title)}</button>`)
+              .join("")}</div>`
+          : `<p class="meal-empty">No recipes fit this meal yet.</p>`;
+      });
     } catch (err) {
       toast(err.message, { error: true });
-      button.disabled = false;
-      button.textContent = "Suggest dishes";
     }
     return;
   }
   if (action === "delete-guest") return update(`/retreats/guests/${button.closest("[data-guest-id]").dataset.guestId}`, "DELETE");
-  if (action === "preview-guests") return previewGuests();
+  if (action === "preview-guests") return busy(button, previewGuests);
   if (action === "import-guests") {
     if (!pendingImport) return;
     const { text, replace } = pendingImport;
     pendingImport = null;
     try {
-      const result = await api(`/retreats/${id}/guests/import`, { method: "POST", body: { text, replace } });
+      const result = await busy(button, () => api(`/retreats/${id}/guests/import`, { method: "POST", body: { text, replace } }));
       retreat = result;
       render();
       toast(replace ? "Dietary list replaced." : "Added to the dietary list.");
@@ -360,11 +443,17 @@ app.addEventListener("click", async (e) => {
     return;
   }
   if (action === "versions-from-list") return update(`/retreats/dishes/${dishId}`, "PUT", { versions_from_guests: true });
-  if (action === "delete-dish") return update(`/retreats/dishes/${dishId}`, "DELETE");
+  if (action === "delete-dish") {
+    const title = button.closest(".dish").querySelector(".dish-title").textContent;
+    const ok = await confirmDialog({ title: "Remove this dish?", description: `${title} comes off this meal. The order lists update.`, confirm: "Remove" });
+    if (ok) await update(`/retreats/dishes/${dishId}`, "DELETE");
+    return;
+  }
   if (action === "auto-main") return update(`/retreats/dishes/${dishId}`, "PUT", { servings: null });
   if (action === "reset-people") return update(`/retreats/meals/${mealId}`, "PUT", { headcount: null });
   if (action === "delete-meal") {
-    if (confirm("Delete this meal and its dishes?")) update(`/retreats/meals/${mealId}`, "DELETE");
+    const ok = await confirmDialog({ title: "Delete this meal?", description: "The meal and its dishes are removed from the menu.", confirm: "Delete" });
+    if (ok) await update(`/retreats/meals/${mealId}`, "DELETE");
     return;
   }
   if (action === "move-meal") {
@@ -374,14 +463,15 @@ app.addEventListener("click", async (e) => {
     });
   }
   if (action === "add-meal") {
-    const row = button.parentElement;
+    const row = button.closest(".add-meal-row");
     const choice = row.querySelector("[data-add-slot]").value;
     const slot = choice === "other" ? row.querySelector("[data-add-custom]").value.trim() : choice;
     if (!slot) return toast("Type a name for this meal.", { error: true });
     return update(`/retreats/${id}/meals`, "POST", { date: button.dataset.date, slot });
   }
   if (action === "delete-retreat") {
-    if (!confirm(`Delete "${retreat.name}" and its whole plan?`)) return;
+    const ok = await confirmDialog({ title: `Delete ${retreat.name}?`, description: "The whole menu plan and its order lists are removed. This can't be undone.", confirm: "Delete retreat" });
+    if (!ok) return;
     try {
       await api(`/retreats/${id}`, { method: "DELETE" });
       location.href = "/retreats.html";

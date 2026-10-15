@@ -2,49 +2,32 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Retreat · Kitchen King</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
-  <meta name="theme-color" content="#2f5d3a">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)">
+  <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/jev.css">
-  <style>
-    .meal { border-top: 1px solid var(--line); padding: 12px 0; }
-    .meal-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .meal-head .slot { font-weight: 700; text-transform: capitalize; flex: 1; }
-    .meal-head input { width: 8.5rem; }
-    .people { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
-    .people input { width: 5rem; }
-    .dish { margin: 8px 0; padding: 8px; border: 1px solid var(--line); border-radius: 8px; }
-    .versions { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 6px; }
-    .versions label { display: flex; align-items: center; gap: 6px; margin: 0; font-weight: 400; }
-    .versions input { width: 5rem; }
-    .linklike { background: none; border: 0; color: var(--accent); padding: 0 4px; min-height: 0; text-decoration: underline; font-weight: 400; }
-    details { margin: 6px 0; }
-    summary { cursor: pointer; padding: 8px 0; color: var(--accent); font-weight: 600; }
-    .picker-list { list-style: none; padding: 0; max-height: 40vh; overflow-y: auto; }
-    .picker-list li { padding: 0; }
-    .picker-list button { width: 100%; text-align: left; background: transparent; color: var(--fg); border-bottom: 1px solid var(--line); border-radius: 0; }
-    .guest { border-top: 1px solid var(--line); padding: 4px 0 10px; margin: 0; }
-    details.guest summary { color: var(--fg); font-weight: 400; }
-    .guest .grow { flex: 1; min-width: 10rem; width: auto; }
-    .guest input[data-guest=count] { width: 5rem; }
-    .guest input[data-guest=note] { margin-top: 6px; }
-    .diet-picks { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; }
-    label.inline { display: flex; align-items: center; gap: 6px; margin: 0; font-weight: 400; }
-    .hidden { display: none !important; }
-    #guest-preview ul { margin: 8px 0; }
-  </style>
+  <link rel="stylesheet" href="/retreat.css">
 </head>
 <body>
-  <header>
-    <h1><a href="/">Kitchen King</a></h1>
-    <nav><a href="/retreats.html">Retreats</a><a href="/recipes.html">Recipes</a></nav>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <a class="brand" href="/"><span class="brand-mark"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"/><path d="M5 21h14"/></svg></span>Kitchen King</a>
+      <nav class="top-nav" aria-label="Main"><a href="/">Home</a><a href="/retreats.html" aria-current="page">Retreats</a><a href="/recipes.html">Recipes</a><a href="/ingredients.html">Pantry</a></nav>
+    </div>
   </header>
-  <main>
-    <div id="app"><p class="muted">Loading…</p></div>
+  <main class="container">
+    <div id="app"><div class="card" aria-busy="true"><div class="skeleton skeleton-line" style="width:50%"></div><div class="skeleton skeleton-line" style="width:70%"></div><div class="skeleton skeleton-block"></div></div></div>
   </main>
+  <nav class="tab-bar" aria-label="Main">
+    <a href="/"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Home</a>
+    <a href="/retreats.html" aria-current="page"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>Retreats</a>
+    <a href="/recipes.html"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>Recipes</a>
+    <a href="/ingredients.html"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.27 21.7s9.87-3.5 12.73-6.36a4.5 4.5 0 0 0-6.36-6.37C5.77 11.84 2.27 21.7 2.27 21.7zM8.64 14l-2.05-2.04M15.34 15l-2.46-2.46"/><path d="M22 9s-1.33-2-3.5-2C16.86 7 15 9 15 9s1.33 2 3.5 2S22 9 22 9z"/><path d="M15 2s-2 1.33-2 3.5S15 9 15 9s2-1.84 2-3.5C17 3.33 15 2 15 2z"/></svg>Pantry</a>
+  </nav>
   <script type="module" src="/retreat.js"></script>
 </body>
 </html>

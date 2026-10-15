@@ -1,4 +1,4 @@
-import { api, escape, qs, toast } from "/lib.js";
+import { api, escape, icon, qs, toast, busy, skeleton } from "/lib.js";
 
 const retreatId = qs("id") ?? qs("retreat");
 const lists = document.getElementById("lists");
@@ -28,31 +28,34 @@ function packText(l) {
 function lineHtml(l) {
   const k = key(l);
   const packs = packText(l);
-  const spare = packs && l.leftover > 0 ? ` <span class="muted">${escape(formatSpare(l))} spare</span>` : "";
+  const spare = packs && l.leftover > 0 ? ` · ${escape(formatSpare(l))} spare` : "";
   const orderBy = l.order_by_date !== l.delivery_date ? ` · order by ${escape(day(l.order_by_date))}` : "";
   const uses = l.uses
-    .map((u) => `<li>${escape(day(u.date))} ${escape(u.slot)} · ${escape(u.recipe_title)} (${escape(u.version_label)}) · ${escape(formatAmount(l, u.amount))}</li>`)
+    .map((u) => `<li><span>${escape(day(u.date))} ${escape(u.slot)} · ${escape(u.recipe_title)} (${escape(u.version_label)})</span><span class="num">${escape(formatAmount(l, u.amount))}</span></li>`)
     .join("");
   const suppliers = data.suppliers
     .map((s) => `<option value="${s.id}"${s.id === l.supplier_id ? " selected" : ""}>${escape(s.name)}</option>`)
     .join("");
-  return `<li class="order-line${l.ticked ? " done" : ""}" data-ing="${l.ingredient_id}" data-group="${escape(l.line_group)}">
-    <input type="checkbox" class="tick" aria-label="Got ${escape(l.name)}"${l.ticked ? " checked" : ""}>
+  const fid = `${key(l).replace(/[^a-z0-9]/gi, "-")}`;
+  return `<li class="order-line item${l.ticked ? " done" : ""}" data-ing="${l.ingredient_id}" data-group="${escape(l.line_group)}">
+    <input type="checkbox" class="tick checkbox-lg" aria-label="Got ${escape(l.name)}"${l.ticked ? " checked" : ""}>
     <div class="line-body">
       <details${open.has(k) ? " open" : ""} data-key="${escape(k)}">
         <summary>
-          <div><span class="name">${escape(l.name)}</span> — <span class="amount">${escape(l.display)}</span></div>
-          ${packs ? `<div class="meta">${escape(packs)}${spare}</div>` : ""}
-          <div class="meta muted">${escape(l.supplier_name)}${orderBy}</div>
+          <span class="line-main"><span class="name">${escape(l.name)}</span><span class="amount num">${escape(l.display)}</span></span>
+          ${packs ? `<span class="meta">${escape(packs)}${spare}</span>` : ""}
+          <span class="meta">${escape(l.supplier_name)}${orderBy}</span>
         </summary>
         <div class="panel">
-          <strong>What it's for</strong>
-          <ul>${uses}</ul>
-          <label>Delivery date<input type="date" class="f-date" value="${escape(l.delivery_date)}"></label>
-          <label>Supplier<select class="f-supplier">${suppliers}</select></label>
-          <div class="row" style="margin-top:12px">
-            <button type="button" class="f-save">Save</button>
-            <button type="button" class="secondary f-reset">Reset to automatic</button>
+          <p class="panel-title">What it's for</p>
+          <ul class="uses">${uses}</ul>
+          <div class="grid-2">
+            <div class="field"><label for="date-${fid}">Delivery date</label><input id="date-${fid}" type="date" class="f-date" value="${escape(l.delivery_date)}"></div>
+            <div class="field"><label for="sup-${fid}">Supplier</label><select id="sup-${fid}" class="f-supplier">${suppliers}</select></div>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-sm f-save">Save</button>
+            <button type="button" class="btn btn-ghost btn-sm f-reset">Reset to automatic</button>
           </div>
         </div>
       </details>
@@ -78,12 +81,18 @@ function formatBase(value, unit) {
 /** Ticked lines sink to the bottom, otherwise the server's order stays. */
 const sinkTicked = (lines) => [...lines].sort((a, b) => Number(a.ticked) - Number(b.ticked));
 
-function cardHtml(id, title, subtitle, bodyHtml) {
-  return `<section class="card" data-card="${id}">
-    <h2>${title}</h2>
-    ${subtitle ? `<p class="muted">${subtitle}</p>` : ""}
+function cardHtml(id, title, subtitle, bodyHtml, lines) {
+  const left = lines.filter((l) => !l.ticked).length;
+  const count = left === 0 ? "All ticked off" : `${left} of ${lines.length} to get`;
+  return `<section class="card card-flush" data-card="${id}">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">${title}</h2>
+        <p class="card-description">${subtitle ? `${subtitle} · ` : ""}${count}</p>
+      </div>
+      <button type="button" class="btn btn-outline btn-sm copy no-print">${icon("copy")}Copy list</button>
+    </div>
     ${bodyHtml}
-    <p class="card-actions"><button type="button" class="secondary copy">Copy list</button></p>
   </section>`;
 }
 
@@ -92,19 +101,24 @@ function deliveryTitle(g) {
   if (g.pantry) labels.push("Opening order");
   const fresh = [...new Set(g.lines.filter((l) => l.line_group !== "pantry").map((l) => l.line_group))].sort();
   if (fresh.length) labels.push(`Fresh for ${fresh.map(day).join(", ")}`);
-  return `${labels.join(" + ")} · delivered ${day(g.delivery_date)}`;
+  return labels.join(" + ");
 }
 
 function render() {
-  document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tab === tab)));
+  document.querySelectorAll("#tabs button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tab === tab)));
   if (!data.lines.length) {
-    lists.innerHTML = `<section class="card"><p class="muted">Add dishes to the menu to see what to order.</p></section>`;
+    lists.innerHTML = `
+      <div class="empty">
+        <div class="empty-media">${icon("shopping-basket", { size: 20 })}</div>
+        <p class="empty-title">Nothing to order yet</p>
+        <p class="empty-description">Add dishes to the menu to see what to order.</p>
+        <div class="actions"><a class="btn btn-outline" href="/retreat.html?id=${encodeURIComponent(retreatId)}">Back to the menu</a></div>
+      </div>`;
     return;
   }
+  const list = (lines) => `<ul class="item-list order-lines">${sinkTicked(lines).map(lineHtml).join("")}</ul>`;
   if (tab === "delivery") {
-    lists.innerHTML = data.by_delivery
-      .map((g, i) => cardHtml(`d${i}`, escape(deliveryTitle(g)), "", `<ul class="order-lines">${sinkTicked(g.lines).map(lineHtml).join("")}</ul>`))
-      .join("");
+    lists.innerHTML = data.by_delivery.map((g, i) => cardHtml(`d${i}`, `Delivered ${escape(day(g.delivery_date))}`, escape(deliveryTitle(g)), list(g.lines), g.lines)).join("");
   } else {
     lists.innerHTML = data.by_supplier
       .map((g, i) => {
@@ -112,10 +126,10 @@ function render() {
         const body = dates
           .map((d) => {
             const lines = g.lines.filter((l) => l.delivery_date === d);
-            return `<p class="when">Delivered ${escape(day(d))}</p><ul class="order-lines">${sinkTicked(lines).map(lineHtml).join("")}</ul>`;
+            return `<p class="when">Delivered ${escape(day(d))}</p>${list(lines)}`;
           })
           .join("");
-        return cardHtml(`s${i}`, escape(g.supplier_name), "", body);
+        return cardHtml(`s${i}`, escape(g.supplier_name), "", body, g.lines);
       })
       .join("");
   }
@@ -199,16 +213,16 @@ lists.addEventListener("click", async (e) => {
     if (date && date !== line.delivery_date) body.delivery_date = date;
     if (supplier && supplier !== line.supplier_id) body.supplier_id = supplier;
     if (Object.keys(body).length === 2) return toast("Nothing to change.");
-    await send("PUT", linesPath(), body);
+    await busy(btn, () => send("PUT", linesPath(), body));
     toast("Saved");
   } else if (btn.classList.contains("f-reset")) {
     const { ingredient_id, line_group } = lineOf(btn);
-    await send("DELETE", linesPath(), { ingredient_id, line_group });
+    await busy(btn, () => send("DELETE", linesPath(), { ingredient_id, line_group }));
     toast("Back to automatic");
   }
 });
 
-document.querySelector(".tabs").addEventListener("click", (e) => {
+document.getElementById("tabs").addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (!b) return;
   tab = b.dataset.tab;
@@ -222,20 +236,20 @@ document.getElementById("print").addEventListener("click", () => window.print())
 
 async function init() {
   if (!retreatId) {
-    lists.innerHTML = `<p class="muted">Open this page from a retreat.</p>`;
+    lists.innerHTML = `<div class="empty"><p class="empty-title">Open this page from a retreat</p><div class="actions"><a class="btn btn-outline" href="/retreats.html">Go to retreats</a></div></div>`;
     return;
   }
   document.getElementById("back").href = `/retreat.html?id=${encodeURIComponent(retreatId)}`;
   try {
     data = await api(`/orders/${encodeURIComponent(retreatId)}`);
   } catch (err) {
-    lists.innerHTML = `<p class="warn">${escape(err.message)}</p>`;
+    lists.innerHTML = `<div class="alert alert-destructive">${icon("circle-alert")}<p class="alert-title">Couldn't load the order lists</p><p class="alert-description">${escape(err.message)}</p></div>`;
     return;
   }
   const r = data.retreat;
   document.title = `Orders · ${r.name}`;
   document.getElementById("title").textContent = r.name;
-  document.getElementById("dates").textContent = `${day(r.start_date)} – ${day(r.end_date)}`;
+  document.getElementById("dates").textContent = `Order lists · ${day(r.start_date)} – ${day(r.end_date)}`;
   render();
 }
 

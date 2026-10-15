@@ -1,0 +1,88 @@
+/* Retreat page (retreat.html). Components come from styles.css; this is layout for the menu plan. */
+
+/* A card that only holds a collapsible: no vertical padding, the summary row sets the height. */
+.card-tight { padding-block: 0; gap: 0; }
+.card-tight > details.collapsible > summary { padding-block: 0.875rem; }
+.summary-label { display: inline-flex; align-items: center; gap: 0.5rem; }
+.summary-label .icon { color: var(--muted-foreground); width: 1rem; height: 1rem; }
+.card-tight .collapsible-body { padding-bottom: 1.25rem; }
+
+/* Dietary needs */
+#diets .accordion { border-top: 1px solid var(--border); margin-inline: -1.25rem; padding-inline: 1.25rem; }
+@media (min-width: 640px) { #diets .accordion { margin-inline: -1.5rem; padding-inline: 1.5rem; } }
+#diets .accordion > details.collapsible > summary { padding-block: 0.875rem; }
+#diets .accordion > details:last-child .collapsible-body { padding-bottom: 0; }
+.guest-list { display: flex; flex-direction: column; margin-bottom: 1rem; border: 1px solid var(--border); border-radius: var(--radius); }
+.guest-list:empty { display: none; }
+.guest-list > details + details { border-top: 1px solid var(--border); }
+details.guest > summary { padding: 0.625rem 0.75rem; min-height: 3rem; }
+details.guest > summary > .g-main { display: flex; flex-direction: column; gap: 0.0625rem; min-width: 0; }
+.g-needs { color: var(--muted-foreground); font-size: 0.8125rem; font-weight: 400; }
+details.guest > .guest-body { padding: 0.25rem 0.75rem 0.875rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.fields { display: flex; gap: 0.5rem; }
+.fields > :first-child { flex: 1; min-width: 0; }
+.count-wrap { width: 8.5rem; flex-shrink: 0; }
+.guest-body .guest-actions { display: flex; justify-content: flex-end; }
+#add-guest { display: flex; flex-direction: column; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+#add-guest > .form-title { font-weight: 500; }
+.guest-list:empty + #add-guest { border-top: 0; padding-top: 0; }
+#guest-preview:empty { display: none; }
+#guest-preview { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem; }
+#guest-preview ul { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.875rem; }
+#guest-preview li::before { content: ""; display: inline-block; width: 0.25rem; height: 0.25rem; border-radius: 50%; background: var(--muted-foreground); margin-right: 0.5rem; vertical-align: middle; }
+
+/* Days and meals */
+.day-card { gap: 0; }
+.day-card > .card-header { align-items: center; }
+.day-title { font-size: 1.0625rem; }
+.meal { border-top: 1px solid var(--border); margin-top: 1.25rem; padding-top: 1.25rem; }
+.day-card > .card-header + .meal { margin-top: 1rem; }
+.meal-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.meal-name { font-size: 0.9375rem; font-weight: 600; text-transform: capitalize; line-height: 1.3; }
+.meal-sub { color: var(--muted-foreground); font-size: 0.8125rem; margin-top: 0.125rem; }
+.meal-time { width: 6.5rem; flex-shrink: 0; }
+
+.dishes { display: flex; flex-direction: column; margin-top: 0.75rem; }
+.dish { padding: 0.75rem 0; border-top: 1px solid var(--border); }
+.dish:first-child { border-top: 0; padding-top: 0.25rem; }
+.dish-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.dish-title { font-weight: 500; line-height: 1.35; }
+.dish-head .btn { margin-right: -0.5rem; color: var(--muted-foreground); }
+.versions { display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; margin-top: 0.5rem; }
+.ver { display: grid; grid-template-columns: minmax(4.75rem, auto); gap: 0.25rem; align-content: start; }
+.ver > input { width: 0 !important; min-width: 100% !important; } /* the column is as wide as its label, at least 4.75rem */
+.ver > label { font-size: 0.75rem; font-weight: 500; color: var(--muted-foreground); line-height: 1.2; white-space: nowrap; }
+.dish-notes { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.5rem; font-size: 0.8125rem; color: var(--muted-foreground); }
+.dish-notes .warn { display: flex; gap: 0.375rem; align-items: flex-start; }
+.dish-notes .warn .icon { width: 0.875rem; height: 0.875rem; margin-top: 0.1875rem; }
+.dish-notes .btn-link { font-size: inherit; color: var(--foreground); height: auto; vertical-align: baseline; display: inline; }
+
+.suggestions { margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+.suggestions .badges { gap: 0.5rem; }
+.meal-empty { color: var(--muted-foreground); }
+
+.meal-tools { margin-top: 0.5rem; display: flex; flex-direction: column; }
+.meal-tools > details.collapsible > summary { padding-block: 0.5rem; font-size: 0.8125rem; color: var(--muted-foreground); font-weight: 500; justify-content: flex-start; }
+.meal-tools > details.collapsible > summary::after { margin-left: 0; }
+.meal-tools > details.collapsible > summary .icon { width: 0.875rem; height: 0.875rem; }
+.meal-tools > details[open] > summary { color: var(--foreground); }
+.meal-tools .collapsible-body { padding-top: 0.5rem; }
+.tool-block { display: flex; flex-direction: column; gap: 0.75rem; }
+.tool-block + .tool-block { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.tool-block .row .grow { flex: 1 1 8rem; }
+
+.picker-list { max-height: 40vh; overflow-y: auto; margin-top: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius); }
+.picker-list:empty { display: none; }
+.picker-list .item { padding: 0.625rem 0.75rem; min-height: 2.75rem; font-weight: 500; }
+.picker-list li + li { border-top: 1px solid var(--border); }
+.picker-list .picker-empty { padding: 0.75rem; color: var(--muted-foreground); }
+
+.add-meal-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.add-meal-row select { flex: 0 0 8rem; width: 8rem; text-transform: capitalize; }
+.add-meal-row .grow { flex: 1 1 8rem; }
+.day-card > .add-meal { border-top: 1px solid var(--border); margin-top: 1.25rem; }
+.day-card > .add-meal > summary { padding-block: 0.75rem 0.25rem; color: var(--muted-foreground); font-size: 0.8125rem; justify-content: flex-start; }
+.day-card > .add-meal > summary::after { margin-left: 0; }
+.day-card > .add-meal[open] > summary { color: var(--foreground); }
+.dish-notes:empty { display: none; }
+.ver label .auto { font-weight: 400; opacity: 0.7; }
