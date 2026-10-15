@@ -2,31 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Daily sheet · Kitchen King</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
-  <meta name="theme-color" content="#2f5d3a">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)">
+  <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/print.css">
 </head>
-<body>
-  <header>
-    <h1><a href="/">Kitchen King</a></h1>
-    <nav><a href="/retreats.html">Retreats</a><a href="/recipes.html">Recipes</a></nav>
-  </header>
-  <div class="topbar no-print">
-    <a class="button secondary" id="back" href="/retreats.html">Back</a>
-    <div class="daypicker">
-      <button type="button" class="secondary" id="prev" aria-label="Previous day">&larr;</button>
-      <span class="date-label" id="date">Loading…</span>
-      <button type="button" class="secondary" id="next" aria-label="Next day">&rarr;</button>
+<body class="no-tabbar">
+  <header class="app-header toolbar no-print">
+    <div class="app-header-inner">
+      <a class="btn btn-ghost btn-icon" id="back" href="/retreats.html" aria-label="Back to the retreat"><span data-icon="arrow-left"></span></a>
+      <div class="daypicker">
+        <button type="button" class="btn btn-ghost btn-icon btn-sm" id="prev" aria-label="Previous day"><span data-icon="chevron-left"></span></button>
+        <span class="date-label" id="date" aria-live="polite">Loading…</span>
+        <button type="button" class="btn btn-ghost btn-icon btn-sm" id="next" aria-label="Next day"><span data-icon="chevron-right"></span></button>
+      </div>
+      <div class="toolbar-actions">
+        <a class="btn btn-outline btn-sm" id="cards" aria-label="Recipe cards for this day"><span data-icon="file-text"></span><span class="label-wide">Recipe cards</span></a>
+        <button type="button" class="btn btn-sm" id="print"><span data-icon="printer"></span><span class="label-wide">Print</span></button>
+      </div>
     </div>
-    <a class="button secondary" id="cards">Recipe cards</a>
-    <button type="button" id="print">Print</button>
-  </div>
-  <main class="sheet" id="sheet">
-    <p class="muted">Loading…</p>
+  </header>
+  <main class="paper" id="sheet">
+    <div class="stack-sm"><div class="skeleton skeleton-line" style="width:55%"></div><div class="skeleton skeleton-line" style="width:35%"></div><div class="skeleton skeleton-block"></div></div>
   </main>
   <script type="module" src="/print-day.js"></script>
 </body>
